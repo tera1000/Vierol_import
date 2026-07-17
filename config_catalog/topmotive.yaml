@@ -1,0 +1,74 @@
+name: topmotive
+beschreibung: "US OE-Bruttopreise (Hersteller, OE-Nummer, Preis) — pipe-getrennt, headerlos"
+
+datei:
+  trennzeichen: "|"
+  encoding: "utf-8"
+  hat_header: false
+
+spalten:
+  - position: 0
+    name: hersteller
+    typ: string
+    muster: "^[A-Za-z][A-Za-z0-9 \\-\\.]*$"
+  - position: 1
+    name: oeno
+    typ: string
+    muster: "^[A-Z0-9\\-\\./ ]+$"
+  - position: 2
+    name: bezeichnung
+    typ: string
+  - position: 3
+    name: preis
+    typ: decimal_en
+    minimum: 0
+  - position: 4
+    name: datum_letztes_update
+    typ: date_iso
+  - position: 5
+    name: ersatzflag
+    typ: string
+    muster: "^[A-Z]$"
+    pflicht: false
+  - position: 6
+    name: ersatznummer
+    typ: string
+    muster: "^[A-Z0-9\\-\\./ ]+$"
+    pflicht: false
+  - position: 7
+    name: laendercode
+    typ: string
+    muster: "^[A-Z]$"
+
+klassifikation:
+  stichprobe_zeilen: 20
+  schwellenwert: 0.9
+
+mapping:
+  regeln:
+    - quelle: hersteller
+      ziel: hersteller
+    - quelle: oeno
+      ziel: oeno
+    - quelle: bezeichnung
+      ziel: bezeichnung
+    - quelle: preis
+      ziel: preis
+    - quelle: datum_letztes_update
+      ziel: datum_letztes_update
+    - quelle: ersatzflag
+      ziel: ersatzflag
+    - quelle: ersatznummer
+      ziel: ersatznummer
+    - quelle: laendercode
+      ziel: laendercode
+  abgeleitete_felder:
+    - ziel: jahrmonat
+      funktion: ladezeitpunkt_jahrmonat
+
+zielsystem:
+  typ: sqlite
+  tabelle: us_oe_bruttopreise
+  upsert_key:
+    - hersteller
+    - oeno

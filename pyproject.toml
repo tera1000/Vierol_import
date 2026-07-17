@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vierol_import"
+version = "0.1.0"
+description = "Metadaten-gesteuerte Importarchitektur fuer heterogene externe Datenquellen"
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [{ name = "Tera" }]
+
+dependencies = [
+  "pandas>=2.2",
+  "pyyaml>=6.0",
+  "frictionless>=5.0",
+  "sqlalchemy>=2.0",
+  "jsonschema>=4.20",
+  "watchdog>=4.0",
+  "python-json-logger>=2.0",
+  "click>=8.1",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0",
+  "pytest-cov>=5.0",
+  "ruff>=0.5",
+]
+
+[project.scripts]
+vierol_import = "vierol_import.main:cli"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
