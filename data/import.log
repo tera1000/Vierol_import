@@ -1,0 +1,38 @@
+2026-07-17 20:24:44,301 ERROR vierol_import.catalog.reader: Config 'meta_schema' ungueltig: name: Field required; spalten: Field required; mapping: Field required; zielsystem: Field required; $schema: Extra inputs are not permitted; title: Extra inputs are not permitted; type: Extra inputs are not permitted; required: Extra inputs are not permitted; properties: Extra inputs are not permitted
+2026-07-17 21:04:55,393 INFO vierol_import.classification.classifier: Klassifikation test.csv: keine Config passt.
+2026-07-17 21:05:25,301 INFO vierol_import.classification.classifier: Klassifikation test.csv: bester Kandidat 'topmotive' (Score 1.00)
+2026-07-17 21:05:25,310 INFO vierol_import.validation.validator: Validierung test.csv: 10 Zeilen, 0 fehlerhaft -> OK
+2026-07-17 21:05:25,312 INFO vierol_import.mapping.mapper: Mapping test.csv -> 10 Datensaetze, 9 Zielfelder
+2026-07-17 21:05:25,373 DEBUG vierol_import.loading.loader: DDL:
+CREATE TABLE IF NOT EXISTS "us_oe_bruttopreise" (
+  "hersteller" TEXT,
+  "oeno" TEXT,
+  "bezeichnung" TEXT,
+  "preis" REAL,
+  "datum_letztes_update" TEXT,
+  "ersatzflag" TEXT,
+  "ersatznummer" TEXT,
+  "laendercode" TEXT,
+  "jahrmonat" TEXT,
+  UNIQUE ("hersteller", "oeno")
+)
+2026-07-17 21:05:25,391 INFO vierol_import.loading.loader: Load: 10 Datensaetze in Tabelle 'us_oe_bruttopreise' (DB data\vierol_import.sqlite)
+2026-07-17 21:16:46,587 INFO vierol_import.ingest.watcher: Ingest-Scan data\ingest: 1 Datei(en) gefunden.
+2026-07-17 21:16:46,608 INFO vierol_import.classification.classifier: Klassifikation lieferung_a.csv: bester Kandidat 'topmotive' (Score 1.00)
+2026-07-17 21:16:46,609 INFO vierol_import.validation.validator: Validierung lieferung_a.csv: 10 Zeilen, 0 fehlerhaft -> OK
+2026-07-17 21:16:46,609 INFO vierol_import.mapping.mapper: Mapping lieferung_a.csv -> 10 Datensaetze, 9 Zielfelder
+2026-07-17 21:16:46,610 DEBUG vierol_import.loading.loader: DDL:
+CREATE TABLE IF NOT EXISTS "us_oe_bruttopreise" (
+  "hersteller" TEXT,
+  "oeno" TEXT,
+  "bezeichnung" TEXT,
+  "preis" REAL,
+  "datum_letztes_update" TEXT,
+  "ersatzflag" TEXT,
+  "ersatznummer" TEXT,
+  "laendercode" TEXT,
+  "jahrmonat" TEXT,
+  UNIQUE ("hersteller", "oeno")
+)
+2026-07-17 21:16:46,612 INFO vierol_import.loading.loader: Load: 10 Datensaetze in Tabelle 'us_oe_bruttopreise' (DB data\vierol_import.sqlite)
+2026-07-17 21:16:46,613 INFO vierol_import.ingest.watcher: Archiviert: lieferung_a.csv -> data\archive\topmotive\lieferung_a__20260717_211646.csv

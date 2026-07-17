@@ -17,7 +17,7 @@ import re
 from datetime import date, datetime
 from typing import Any
 
-from vierol_import.catalog.schema import SpaltenDef
+from vierol_import.catalog.meta_schema import SpaltenDef
 
 # --- Muster pro Typ -----------------------------------------------------------
 

@@ -1,5 +1,5 @@
 name: topmotive
-beschreibung: "US OE-Bruttopreise (Hersteller, OE-Nummer, Preis) — pipe-getrennt, headerlos"
+beschreibung: "topmotive (Hersteller, OE-Nummer, Preis) — pipe-getrennt, headerlos"
 
 datei:
   trennzeichen: "|"

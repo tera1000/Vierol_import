@@ -1,98 +1,193 @@
 """
-Zentrale Import-Engine.
+Import-Engine: Orchestriert die vier Verarbeitungsstufen fuer EINE Datei.
 
-Orchestriert die Verarbeitungsstufen fuer jede eingehende Datei:
-Klassifikation -> Validierung -> Mapping -> Load -> Nachbereitung.
+  Erkennung -> Validierung -> Mapping -> Load
 
-Die Engine kennt die einzelnen Stufen als abstrakte Aufgaben und
-delegiert die Ausfuehrung an die Fachmodule. Sie enthaelt bewusst
-KEINE quellenspezifische Logik.
+Warum eine eigene Klasse und keine Funktion in main.py?
+
+  1. Klare Trennung UI ↔ Logik: `main.py` beschreibt WAS auf der
+     Konsole passieren soll (User-Interaktion, Farben, Prompts). Die
+     Engine beschreibt WIE eine Datei durch die Pipeline geht. Beide
+     lassen sich unabhaengig aendern.
+
+  2. Testbarkeit: Die Engine bekommt Configs, DB-Pfad und Zeitstempel
+     per Konstruktor injiziert — Tests koennen sie ohne CLI aufrufen.
+
+  3. Zwei Betriebsmodi, eine Engine: Der interaktive `import-file`-
+     Befehl UND der Batch-`run`-Befehl verwenden dieselbe Engine. Der
+     Unterschied liegt allein darin, WIE die Quelle bestimmt wird
+     (Vorschlag+Rueckfrage vs. hoechster Score automatisch).
+
+Die Engine kennt bewusst kein `click` und keine Verzeichnisse. Der
+Aufrufer (CLI) uebersetzt das `VerarbeitungsErgebnis` in Konsolen-
+ausgabe UND in ein Verschieben von Dateien nach archive/ oder reject/.
 """
 
-import logging
-import shutil
-from pathlib import Path
+from __future__ import annotations
 
-from vierol_import.catalog.reader import CatalogReader
+import logging
+from dataclasses import dataclass, field
+from datetime import datetime
+from enum import Enum
+from pathlib import Path
+from typing import Any
+
+from vierol_import.catalog.meta_schema import QuellenConfig
+from vierol_import.classification.classifier import (
+    KlassifikationsErgebnis,
+    VorschlagsRanking,
+    klassifiziere,
+)
+from vierol_import.loading.loader import lade_sqlite
+from vierol_import.mapping.mapper import mappe
+from vierol_import.validation.validator import ValidierungsFehler, validiere
 
 logger = logging.getLogger(__name__)
 
 
+class Status(str, Enum):
+    """Endzustand einer Datei nach Durchlauf der Pipeline."""
+
+    GELADEN = "geladen"
+    ABGELEHNT_UNBEKANNT = "abgelehnt_unbekannt"    # keine Config passt
+    ABGELEHNT_UNSICHER = "abgelehnt_unsicher"      # bester Score < Schwelle
+    ABGELEHNT_UNGUELTIG = "abgelehnt_ungueltig"    # Validierung fehlgeschlagen
+    ABGELEHNT_LADEFEHLER = "abgelehnt_ladefehler"  # Exception beim Load
+
+
+@dataclass
+class VerarbeitungsErgebnis:
+    """Vollstaendiges Resultat eines Datei-Durchlaufs.
+
+    Enthaelt alles, was der Aufrufer fuer Konsolenausgabe, Log und
+    Reject-Bericht braucht — die Engine hat keine Seiteneffekte auf
+    Dateisystem oder stdout, nur die DB.
+    """
+
+    datei: Path
+    status: Status
+    quelle: str | None = None              # gewaehlte Config, wenn bestimmt
+    score: float | None = None             # Erkennungsscore, wenn berechnet
+    ranking: VorschlagsRanking | None = None
+    zeilen_gesamt: int = 0
+    zeilen_geladen: int = 0
+    fehler_grund: str = ""
+    fehler_details: list[str] = field(default_factory=list)
+
+    @property
+    def erfolg(self) -> bool:
+        return self.status is Status.GELADEN
+
+
 class ImportEngine:
-    """
-    Fuehrt die metadaten-gesteuerte Verarbeitung fuer eine oder mehrere Dateien aus.
-    """
+    """Orchestriert Erkennung/Validierung/Mapping/Load fuer eine Datei."""
 
-    def __init__(self, catalog_dir: Path) -> None:
-        self.catalog = CatalogReader(catalog_dir)
-        self.archive_dir = Path("data/archive")
-        self.reject_dir = Path("data/reject")
+    def __init__(
+        self,
+        configs: dict[str, QuellenConfig],
+        db_pfad: Path,
+        ladezeit: datetime | None = None,
+    ) -> None:
+        if not configs:
+            raise ValueError("Engine braucht mindestens eine Config.")
+        self.configs = configs
+        self.db_pfad = db_pfad
+        self.ladezeit = ladezeit or datetime.now()
 
-    def process_directory(self, ingest_dir: Path) -> None:
-        """Alle Dateien im Ingest-Verzeichnis einmal verarbeiten."""
-        files = sorted(p for p in ingest_dir.iterdir() if p.is_file())
-        if not files:
-            logger.info("Keine Dateien im Ingest-Verzeichnis %s gefunden.", ingest_dir)
-            return
+    # --- Modus 1: automatisch (Batch) ----------------------------------------
 
-        for file_path in files:
-            self.process_file(file_path)
+    def verarbeite_auto(self, datei: Path) -> VerarbeitungsErgebnis:
+        """Vollautomatisch: beste Quelle waehlen, verarbeiten oder ablehnen.
 
-    def process_file(self, file_path: Path) -> None:
+        Nur ueber dem quellenspezifischen Schwellenwert wird verarbeitet —
+        alles darunter ist zu unsicher fuer den Batch-Modus.
         """
-        Eine einzelne Datei durch die Pipeline schicken.
+        ranking = klassifiziere(datei, self.configs)
+        bester = ranking.bester
 
-        Ablauf:
-            1. Klassifikation — welche Konfiguration passt?
-            2. Validierung — entspricht die Datei ihrem Schema?
-            3. Mapping — auf das kanonische Modell uebersetzen
-            4. Load — ins Zielsystem schreiben
-            5. Nachbereitung — Datei archivieren oder rejecten
-        """
-        logger.info("Verarbeitung startet: %s", file_path.name)
-
-        try:
-            # TODO Schritt 1: Klassifikation
-            # config = self._classify(file_path)
-            #
-            # TODO Schritt 2: Validierung
-            # validation_result = self._validate(file_path, config)
-            # if not validation_result.ok:
-            #     self._reject(file_path, validation_result.errors)
-            #     return
-            #
-            # TODO Schritt 3: Mapping
-            # mapped = self._map(file_path, config)
-            #
-            # TODO Schritt 4: Load
-            # self._load(mapped, config)
-            #
-            # TODO Schritt 5: Erfolg — Datei archivieren
-            # self._archive(file_path)
-
-            logger.warning(
-                "Pipeline-Schritte sind noch nicht implementiert (siehe TODOs in engine.py)."
+        if bester is None:
+            return VerarbeitungsErgebnis(
+                datei=datei,
+                status=Status.ABGELEHNT_UNBEKANNT,
+                ranking=ranking,
+                fehler_grund="Keine Config passt zu dieser Datei",
+                fehler_details=[
+                    f"{e.quelle}: {e.ko_grund}" for e in ranking.ergebnisse
+                ],
             )
 
-        except Exception as exc:  # noqa: BLE001
-            logger.exception("Fehler bei der Verarbeitung von %s: %s", file_path.name, exc)
-            self._reject(file_path, [str(exc)])
+        cfg = self.configs[bester.quelle]
+        schwelle = cfg.klassifikation.schwellenwert
+        if bester.score < schwelle:
+            return VerarbeitungsErgebnis(
+                datei=datei,
+                status=Status.ABGELEHNT_UNSICHER,
+                quelle=bester.quelle,
+                score=bester.score,
+                ranking=ranking,
+                fehler_grund=(
+                    f"Kein sicherer Vorschlag "
+                    f"(bester Score {bester.score:.0%} < Schwellenwert {schwelle:.0%})"
+                ),
+                fehler_details=[self._ranking_zeile(e) for e in ranking.ergebnisse],
+            )
 
-    # ----- Hilfsmethoden ---------------------------------------------------
+        return self._verarbeite_mit_quelle(datei, cfg, ranking, bester)
 
-    def _archive(self, file_path: Path) -> None:
-        """Datei ins Archiv verschieben."""
-        self.archive_dir.mkdir(parents=True, exist_ok=True)
-        target = self.archive_dir / file_path.name
-        shutil.move(str(file_path), str(target))
-        logger.info("Archiviert: %s", target)
+    # --- Modus 2: mit vorgegebener Quelle (interaktiv oder --quelle) ---------
 
-    def _reject(self, file_path: Path, errors: list[str]) -> None:
-        """Datei in Reject-Queue verschieben und Fehlerbericht ablegen."""
-        self.reject_dir.mkdir(parents=True, exist_ok=True)
-        target = self.reject_dir / file_path.name
-        shutil.move(str(file_path), str(target))
+    def verarbeite_mit_quelle(
+        self, datei: Path, quelle: str
+    ) -> VerarbeitungsErgebnis:
+        """Mit fest gewaehlter Quelle: Erkennung uebersprungen, direkt validieren."""
+        if quelle not in self.configs:
+            raise ValueError(
+                f"Quelle '{quelle}' nicht im Katalog. Verfuegbar: "
+                f"{sorted(self.configs)}"
+            )
+        return self._verarbeite_mit_quelle(datei, self.configs[quelle], None, None)
 
-        error_report = self.reject_dir / (file_path.name + ".errors.txt")
-        error_report.write_text("\n".join(errors), encoding="utf-8")
-        logger.warning("Rejected: %s (%d Fehler)", target, len(errors))
+    # --- gemeinsamer Kern ----------------------------------------------------
+
+    def _verarbeite_mit_quelle(
+        self,
+        datei: Path,
+        cfg: QuellenConfig,
+        ranking: VorschlagsRanking | None,
+        bester: KlassifikationsErgebnis | None,
+    ) -> VerarbeitungsErgebnis:
+        e = VerarbeitungsErgebnis(
+            datei=datei,
+            status=Status.GELADEN,  # optimistisch, wird bei Fehler ueberschrieben
+            quelle=cfg.name,
+            score=bester.score if bester else None,
+            ranking=ranking,
+        )
+
+        v = validiere(datei, cfg)
+        e.zeilen_gesamt = v.zeilen_gesamt
+        if not v.ok:
+            e.status = Status.ABGELEHNT_UNGUELTIG
+            e.fehler_grund = (
+                f"{v.zeilen_fehlerhaft} von {v.zeilen_gesamt} Zeilen fehlerhaft"
+                + (" (Anzeige nach 50 Fehlern abgebrochen)" if v.abgebrochen else "")
+            )
+            e.fehler_details = [str(f) for f in v.fehler]
+            return e
+
+        try:
+            m = mappe(datei, cfg, ladezeit=self.ladezeit)
+            l = lade_sqlite(m, cfg, self.db_pfad)
+            e.zeilen_geladen = l.zeilen_geladen
+        except Exception as ex:
+            logger.exception("Load-Fehler fuer %s", datei.name)
+            e.status = Status.ABGELEHNT_LADEFEHLER
+            e.fehler_grund = f"Fehler beim Laden: {ex}"
+
+        return e
+
+    @staticmethod
+    def _ranking_zeile(e: KlassifikationsErgebnis) -> str:
+        if e.moeglich:
+            return f"{e.quelle}: Score {e.score:.0%}"
+        return f"{e.quelle}: K.O. — {e.ko_grund}"
