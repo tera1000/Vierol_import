@@ -67,16 +67,18 @@ class VerarbeitungsErgebnis:
 
     datei: Path
     status: Status
-    quelle: str | None = None              # gewaehlte Config, wenn bestimmt
-    score: float | None = None             # Erkennungsscore, wenn berechnet
+    quelle: str | None = None
+    score: float | None = None
     ranking: VorschlagsRanking | None = None
     zeilen_gesamt: int = 0
     zeilen_geladen: int = 0
-    zeilen_uebersprungen: int = 0          # PK existierte bereits (Modus skip)
+    zeilen_uebersprungen: int = 0
+    zeilen_quarantaene: int = 0            # Zeilen, die im partiellen Modus abgelehnt wurden
     fehler_grund: str = ""
     fehler_details: list[str] = field(default_factory=list)
-    mapping: MappingErgebnis | None = None  # fuer Vorschau (nur bei Erfolg der ersten Stufen)
-    cfg: QuellenConfig | None = None        # Config-Referenz fuer den Load-Aufruf
+    quarantaene_zeilen: list = field(default_factory=list)  # (nr, spalten, grund)
+    mapping: MappingErgebnis | None = None
+    cfg: QuellenConfig | None = None
 
     @property
     def erfolg(self) -> bool:
@@ -168,39 +170,88 @@ class ImportEngine:
     ) -> VerarbeitungsErgebnis:
         """Vorbereitung: Validierung + Mapping. KEIN Load.
 
-        Der Aufrufer entscheidet danach (mit User-Bestaetigung), ob
-        `schreibe()` aufgerufen wird. So kann eine Vorschau des
-        MappingErgebnisses angezeigt werden, bevor Daten die
-        Zieltabelle beruehren.
+        Zwei Modi je nach Config `zielsystem.fehler_modus`:
+          - alles_oder_nichts (Default): erste Fehler -> Abbruch
+          - partiell: gute Zeilen weiter verarbeiten, kaputte Zeilen fuer
+            eine spaetere Quarantaene-Datei aufheben.
         """
+        partiell = cfg.zielsystem.fehler_modus == "partiell"
         e = VerarbeitungsErgebnis(
             datei=datei,
-            status=Status.GELADEN,  # optimistisch — wird bei Fehler ueberschrieben
+            status=Status.GELADEN,
             quelle=cfg.name,
             score=bester.score if bester else None,
             ranking=ranking,
             cfg=cfg,
         )
 
-        v = validiere(datei, cfg)
+        v = validiere(datei, cfg, partiell=partiell)
         e.zeilen_gesamt = v.zeilen_gesamt
-        if not v.ok:
-            e.status = Status.ABGELEHNT_UNGUELTIG
-            e.fehler_grund = (
-                f"{v.zeilen_fehlerhaft} von {v.zeilen_gesamt} Zeilen fehlerhaft"
-                + (" (Anzeige nach 50 Fehlern abgebrochen)" if v.abgebrochen else "")
-            )
+
+        if not partiell:
+            # Klassisch: ein Fehler -> alles ablehnen
+            if not v.ok:
+                e.status = Status.ABGELEHNT_UNGUELTIG
+                e.fehler_grund = (
+                    f"{v.zeilen_fehlerhaft} von {v.zeilen_gesamt} Zeilen fehlerhaft"
+                    + (" (Anzeige nach 50 Fehlern abgebrochen)" if v.abgebrochen else "")
+                )
+                e.fehler_details = [str(f) for f in v.fehler]
+                return e
+            gute_zeilen = None  # kein Filter, alle mappen
+        else:
+            # Partieller Modus: Fehler sammeln, gute Zeilen mappen
+            e.zeilen_quarantaene = v.zeilen_fehlerhaft
             e.fehler_details = [str(f) for f in v.fehler]
-            return e
+            e.quarantaene_zeilen = self._quarantaene_zeilen_lesen(datei, cfg, v)
+            gute_zeilen = v.gute_zeilen
+
+            if not v.gute_zeilen:
+                # Alle Zeilen kaputt -> keine sinnvolle Ladung mehr
+                e.status = Status.ABGELEHNT_UNGUELTIG
+                e.fehler_grund = (
+                    f"Alle {v.zeilen_gesamt} Zeilen fehlerhaft "
+                    "(partieller Modus, aber nichts zu laden)"
+                )
+                return e
 
         try:
-            e.mapping = mappe(datei, cfg, ladezeit=self.ladezeit)
+            e.mapping = mappe(datei, cfg, ladezeit=self.ladezeit, nur_zeilen=gute_zeilen)
         except Exception as ex:
             logger.exception("Mapping-Fehler fuer %s", datei.name)
             e.status = Status.ABGELEHNT_LADEFEHLER
             e.fehler_grund = f"Fehler beim Mapping: {ex}"
 
         return e
+
+    @staticmethod
+    def _quarantaene_zeilen_lesen(
+        datei: Path, cfg: QuellenConfig, v
+    ) -> list:
+        """Fuer den partiellen Modus: originale Rohzeilen der fehlerhaften
+        Zeilen einlesen, damit sie in die Quarantaene-CSV geschrieben werden
+        koennen. Bezieht Fehlergruende pro Zeile aus dem Validierungsergebnis."""
+        import csv as _csv
+
+        fehler_nach_zeile: dict[int, list[str]] = {}
+        for f in v.fehler:
+            fehler_nach_zeile.setdefault(f.zeile, []).append(
+                f.grund if f.spalte is None else f"{f.spalte}: {f.grund}"
+            )
+
+        ergebnis = []
+        with open(datei, newline="", encoding=cfg.datei.encoding) as fh:
+            reader = _csv.reader(fh, delimiter=cfg.datei.trennzeichen)
+            start = 2 if cfg.datei.hat_header else 1
+            if cfg.datei.hat_header:
+                next(reader, None)
+            for nr, zeile in enumerate(reader, start=start):
+                if not zeile:
+                    continue
+                if nr in fehler_nach_zeile:
+                    grund = " | ".join(fehler_nach_zeile[nr])
+                    ergebnis.append((nr, list(zeile), grund))
+        return ergebnis
 
     def schreibe(self, ergebnis: VerarbeitungsErgebnis) -> VerarbeitungsErgebnis:
         """Fuehrt den Load-Schritt aus. Setzt voraus, dass das Ergebnis

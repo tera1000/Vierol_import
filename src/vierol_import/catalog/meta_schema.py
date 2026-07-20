@@ -190,6 +190,19 @@ class ZielsystemConfig(StrictModel):
             "  - reject: ganze Datei ablehnen, wenn auch nur ein Konflikt auftritt"
         ),
     )
+    fehler_modus: Literal["alles_oder_nichts", "partiell"] = Field(
+        default="alles_oder_nichts",
+        description=(
+            "Verhalten bei fehlerhaften Zeilen in der Datei:\n"
+            "  - alles_oder_nichts (Default): eine kaputte Zeile -> Datei komplett\n"
+            "    abgelehnt, keine Daten geladen. Sicher, aber im Alltag oft "
+            "    unpraktisch bei grossen Dateien mit vereinzelten Fehlern.\n"
+            "  - partiell: gute Zeilen werden geladen, kaputte Zeilen kommen in\n"
+            "    eine separate Quarantaene-CSV im reject-Ordner mit Fehlergrund.\n"
+            "    Praktischer im Alltag, aber User muss ueberwachen, dass die\n"
+            "    Quarantaene nicht wesentliche Daten enthaelt."
+        ),
+    )
 
 
 # --- Gesamt-Konfiguration -----------------------------------------------------

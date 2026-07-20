@@ -1,0 +1,137 @@
+name: fahrzeugdaten
+beschreibung: "Gebrauchtwagendaten und Verkaufspreise — Komma-getrennt, mit Header"
+
+datei:
+  trennzeichen: ","
+  encoding: "utf-8"
+  hat_header: true
+
+spalten:
+  - position: 0
+    name: make
+    typ: string
+    muster: "^[A-Za-z0-9\\-]+$"
+    pflicht: false
+  - position: 1
+    name: model
+    typ: string
+    pflicht: false
+  - position: 2
+    name: year
+    typ: integer
+    pflicht: false
+  - position: 3
+    name: fuel_type
+    typ: string
+    pflicht: false
+  - position: 4
+    name: transmission
+    typ: string
+    pflicht: false
+  - position: 5
+    name: engine_size
+    typ: decimal_en
+    pflicht: false
+  - position: 6
+    name: mileage
+    typ: integer
+    pflicht: false
+  - position: 7
+    name: horsepower
+    typ: decimal_en
+    pflicht: false
+  - position: 8
+    name: torque
+    typ: decimal_en
+    pflicht: false
+  - position: 9
+    name: owners
+    typ: integer
+    pflicht: false
+  - position: 10
+    name: accident_history
+    typ: decimal_en
+    pflicht: false
+  - position: 11
+    name: service_history
+    typ: string
+    pflicht: false  # In der Stichprobe leer, daher optional
+  - position: 12
+    name: color
+    typ: string
+    pflicht: false
+  - position: 13
+    name: body_type
+    typ: string
+    pflicht: false
+  - position: 14
+    name: drivetrain
+    typ: string
+    pflicht: false
+  - position: 15
+    name: fuel_efficiency
+    typ: decimal_en
+    pflicht: false
+  - position: 16
+    name: location
+    typ: string
+    muster: "^[A-Z]{2}$"  # Für zweistellige US-Bundesstaaten (IL, FL)
+    pflicht: false
+  - position: 17
+    name: selling_price
+    typ: integer
+    pflicht: false
+
+klassifikation:
+  stichprobe_zeilen: 20
+  schwellenwert: 0.9
+
+mapping:
+  regeln:
+    - quelle: make
+      ziel: make
+    - quelle: model
+      ziel: model
+    - quelle: year
+      ziel: year
+    - quelle: fuel_type
+      ziel: fuel_type
+    - quelle: transmission
+      ziel: transmission
+    - quelle: engine_size
+      ziel: engine_size
+    - quelle: mileage
+      ziel: mileage
+    - quelle: horsepower
+      ziel: horsepower
+    - quelle: torque
+      ziel: torque
+    - quelle: owners
+      ziel: owners
+    - quelle: accident_history
+      ziel: accident_history
+    - quelle: service_history
+      ziel: service_history
+    - quelle: color
+      ziel: color
+    - quelle: body_type
+      ziel: body_type
+    - quelle: drivetrain
+      ziel: drivetrain
+    - quelle: fuel_efficiency
+      ziel: fuel_efficiency
+    - quelle: location
+      ziel: location
+    - quelle: selling_price
+      ziel: selling_price
+
+zielsystem:
+  typ: sqlite
+  tabelle: gebrauchtwagen
+  upsert_key:
+    - make
+    - model
+    - year
+    - mileage
+  pk_konflikt: skip
+  fehler_modus: partiell  

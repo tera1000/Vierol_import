@@ -49,13 +49,24 @@ class ValidierungsErgebnis:
     zeilen_fehlerhaft: int = 0
     fehler: list[ValidierungsFehler] = field(default_factory=list)
     abgebrochen: bool = False  # True: mehr Fehler als MAX_FEHLER
+    # Fuer partiellen Modus: nummern der ZEILEN, die durchgekommen sind
+    # (1-basiert wie bei den Fehler-Zeilennummern).
+    gute_zeilen: set[int] = field(default_factory=set)
 
 
-def validiere(file_path: Path, cfg: QuellenConfig) -> ValidierungsErgebnis:
+def validiere(
+    file_path: Path, cfg: QuellenConfig, partiell: bool = False
+) -> ValidierungsErgebnis:
     """Datei vollstaendig gegen die Quellen-Config pruefen.
 
     Prueft pro Zeile: Spaltenanzahl; pro Zelle: Typ, Regex-Muster,
     Pflichtfeld, Wertebereich (minimum/maximum bei numerischen Typen).
+
+    Mit `partiell=True` verhaelt sich der Validator etwas anders:
+      - MAX_FEHLER-Grenze wird ignoriert (wir muessen alle Zeilen kennen),
+      - `gute_zeilen` wird gefuellt mit den Nummern der validen Zeilen,
+      - `ok` bleibt False, sobald es auch nur einen Fehler gab,
+        aber der Aufrufer kann trotzdem die guten Zeilen laden.
     """
     ergebnis = ValidierungsErgebnis(ok=True)
     spalten = sorted(cfg.spalten, key=lambda s: s.position)
@@ -84,11 +95,18 @@ def validiere(file_path: Path, cfg: QuellenConfig) -> ValidierungsErgebnis:
 
             if zeilen_fehler:
                 ergebnis.zeilen_fehlerhaft += 1
-                platz = MAX_FEHLER - len(ergebnis.fehler)
-                ergebnis.fehler.extend(zeilen_fehler[:platz])
-                if len(ergebnis.fehler) >= MAX_FEHLER:
-                    ergebnis.abgebrochen = True
-                    break
+                if partiell:
+                    # Alle Fehler sammeln, nicht abbrechen — der Aufrufer
+                    # braucht die vollstaendige Liste fuer die Quarantaene.
+                    ergebnis.fehler.extend(zeilen_fehler)
+                else:
+                    platz = MAX_FEHLER - len(ergebnis.fehler)
+                    ergebnis.fehler.extend(zeilen_fehler[:platz])
+                    if len(ergebnis.fehler) >= MAX_FEHLER:
+                        ergebnis.abgebrochen = True
+                        break
+            else:
+                ergebnis.gute_zeilen.add(nr)
 
     ergebnis.ok = ergebnis.zeilen_fehlerhaft == 0 and ergebnis.zeilen_gesamt > 0
     if ergebnis.zeilen_gesamt == 0:

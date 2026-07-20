@@ -79,17 +79,22 @@ def mappe(
     file_path: Path,
     cfg: QuellenConfig,
     ladezeit: datetime | None = None,
+    nur_zeilen: set[int] | None = None,
 ) -> MappingErgebnis:
     """Ganze Datei mappen und alle Datensaetze zurueckliefern.
 
     `ladezeit` erlaubt Tests mit fixierter Zeit; im Normalbetrieb wird
     `datetime.now()` verwendet. Wichtig: EIN Zeitstempel pro Lauf, damit
     alle Zeilen dasselbe `jahrmonat` bekommen.
+
+    `nur_zeilen` (optional): fuer den partiellen Modus — nur die
+    angegebenen Zeilennummern werden gemappt (die Validierung hat
+    entschieden, welche Zeilen sauber sind).
     """
     if ladezeit is None:
         ladezeit = datetime.now()
 
-    saetze = list(_mappe_iter(file_path, cfg, ladezeit))
+    saetze = list(_mappe_iter(file_path, cfg, ladezeit, nur_zeilen))
 
     # Zielfeld-Reihenfolge: erst Spalten-Regeln (in Reihenfolge der Config),
     # dann abgeleitete Felder. Deterministisch, damit die Load-Stufe die
@@ -108,7 +113,8 @@ def mappe(
 
 
 def _mappe_iter(
-    file_path: Path, cfg: QuellenConfig, ladezeit: datetime
+    file_path: Path, cfg: QuellenConfig, ladezeit: datetime,
+    nur_zeilen: set[int] | None = None,
 ) -> Iterator[dict[str, Any]]:
     d = cfg.datei
     spalten_nach_name = {s.name: s for s in cfg.spalten}
@@ -126,11 +132,15 @@ def _mappe_iter(
 
     with open(file_path, newline="", encoding=d.encoding) as f:
         reader = csv.reader(f, delimiter=d.trennzeichen)
+        start_zeile = 2 if d.hat_header else 1
         if d.hat_header:
             next(reader, None)
 
-        for zeile in reader:
+        for nr, zeile in enumerate(reader, start=start_zeile):
             if not zeile:
+                continue
+            # Filter fuer partiellen Modus
+            if nur_zeilen is not None and nr not in nur_zeilen:
                 continue
 
             satz: dict[str, Any] = {}

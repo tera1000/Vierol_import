@@ -73,3 +73,4 @@ zielsystem:
     - hersteller
     - oeno
   pk_konflikt: skip     # PK existiert bereits -> neuen Datensatz ueberspringen
+  fehler_modus: partiell  # kaputte Zeilen -> Quarantaene, gute Zeilen trotzdem laden

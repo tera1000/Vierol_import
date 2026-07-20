@@ -182,3 +182,48 @@ def starte_watch(
     observer.start()
     logger.info("Watch aktiv auf %s", ingest_dir)
     return observer
+
+
+# --- Quarantaene (partieller Modus) ------------------------------------------
+
+
+def schreibe_quarantaene(
+    original_datei: Path,
+    reject_dir: Path,
+    fehler_zeilen: list["tuple[int, list[str], str]"],
+    zeitstempel: datetime | None = None,
+) -> Path:
+    """Schreibt eine Quarantaene-CSV neben dem Reject-Verzeichnis.
+
+    Format der CSV:
+        original_zeile_nr; fehler_grund; original_zeile
+    (Semikolon-getrennt, unabhaengig vom Trennzeichen der Quelldatei —
+     der Fachbereich soll das in Excel oeffnen koennen.)
+
+    `fehler_zeilen`: Liste aus (Zeilennummer, Rohzeile-Spalten, Grund).
+    """
+    import csv as _csv
+
+    zeit = zeitstempel or datetime.now()
+    reject_dir.mkdir(parents=True, exist_ok=True)
+    # Namensschema: <original_stamm>_fehlerhaft__<zeitstempel>.csv
+    # Der Zeitstempel bleibt drin, damit bei mehreren Laeufen derselben
+    # Quelle nichts ueberschrieben wird.
+    ziel = reject_dir / _mit_zeitstempel(
+        f"{original_datei.stem}_fehlerhaft.csv", zeit
+    )
+
+    with open(ziel, "w", newline="", encoding="utf-8") as f:
+        writer = _csv.writer(f, delimiter=";")
+        writer.writerow(["zeile_nr", "fehler_grund", "original_zeile"])
+        for nr, spalten, grund in fehler_zeilen:
+            # Rohzeile mit dem Original-Trennzeichen wieder zusammensetzen
+            # waere umstaendlich — wir schreiben sie einfach mit Pipe, damit
+            # sie in Excel als ein Feld erscheint.
+            original = "|".join(spalten)
+            writer.writerow([nr, grund, original])
+
+    logger.info(
+        "Quarantaene geschrieben: %s (%d Zeilen)", ziel, len(fehler_zeilen)
+    )
+    return ziel

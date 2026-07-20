@@ -1,449 +1,299 @@
 """
-CLI des Vierol-Import-Prototyps.
+Import-Engine: Orchestriert die vier Verarbeitungsstufen fuer EINE Datei.
 
-Befehle:
-    python -m vierol_import import-file <datei>   # interaktiver Import-Workflow
-    python -m vierol_import run                   # Batch-Modus fuer data/ingest/
-    python -m vierol_import validate-config       # Katalog gegen Meta-Schema pruefen
+  Erkennung -> Validierung -> Mapping -> Load
 
-Diese Datei enthaelt AUSSCHLIESSLICH UI-Logik: click-Optionen, farbige
-Ausgaben, User-Prompts, Verschieben von Dateien nach archive/reject.
-Die eigentliche Pipeline-Orchestrierung lebt in `engine.ImportEngine`
-und wird von beiden Modi (import-file, run) benutzt.
+Warum eine eigene Klasse und keine Funktion in main.py?
+
+  1. Klare Trennung UI ↔ Logik: `main.py` beschreibt WAS auf der
+     Konsole passieren soll (User-Interaktion, Farben, Prompts). Die
+     Engine beschreibt WIE eine Datei durch die Pipeline geht. Beide
+     lassen sich unabhaengig aendern.
+
+  2. Testbarkeit: Die Engine bekommt Configs, DB-Pfad und Zeitstempel
+     per Konstruktor injiziert — Tests koennen sie ohne CLI aufrufen.
+
+  3. Zwei Betriebsmodi, eine Engine: Der interaktive `import-file`-
+     Befehl UND der Batch-`run`-Befehl verwenden dieselbe Engine. Der
+     Unterschied liegt allein darin, WIE die Quelle bestimmt wird
+     (Vorschlag+Rueckfrage vs. hoechster Score automatisch).
+
+Die Engine kennt bewusst kein `click` und keine Verzeichnisse. Der
+Aufrufer (CLI) uebersetzt das `VerarbeitungsErgebnis` in Konsolen-
+ausgabe UND in ein Verschieben von Dateien nach archive/ oder reject/.
 """
 
 from __future__ import annotations
 
 import logging
+from dataclasses import dataclass, field
+from datetime import datetime
+from enum import Enum
 from pathlib import Path
-
-import click
+from typing import Any
 
 from vierol_import.catalog.meta_schema import QuellenConfig
-from vierol_import.catalog.reader import load_catalog
-from vierol_import.classification.classifier import VorschlagsRanking, klassifiziere
-from vierol_import.engine import ImportEngine, Status, VerarbeitungsErgebnis
-from vierol_import.ingest.watcher import (
-    scanne_ingest,
-    starte_watch,
-    verschiebe_ins_archiv,
-    verschiebe_ins_reject,
+from vierol_import.classification.classifier import (
+    KlassifikationsErgebnis,
+    VorschlagsRanking,
+    klassifiziere,
 )
-from vierol_import.monitoring.logger import setup_logging
-
-DEFAULT_CATALOG = Path("config_catalog")
-DEFAULT_DB = Path("data/vierol_import.sqlite")
-DEFAULT_INGEST = Path("data/ingest")
-DEFAULT_ARCHIVE = Path("data/archive")
-DEFAULT_REJECT = Path("data/reject")
+from vierol_import.loading.loader import PKKonfliktFehler, lade_sqlite
+from vierol_import.mapping.mapper import MappingErgebnis, mappe
+from vierol_import.validation.validator import ValidierungsFehler, validiere
 
 logger = logging.getLogger(__name__)
 
 
-@click.group()
-@click.option("--verbose", "-v", is_flag=True, help="Ausfuehrliches Logging aktivieren.")
-def cli(verbose: bool) -> None:
-    """Vierol Import — metadaten-gesteuerte Importarchitektur."""
-    setup_logging(verbose=verbose)
+class Status(str, Enum):
+    """Endzustand einer Datei nach Durchlauf der Pipeline."""
+
+    GELADEN = "geladen"
+    ABGELEHNT_UNBEKANNT = "abgelehnt_unbekannt"    # keine Config passt
+    ABGELEHNT_UNSICHER = "abgelehnt_unsicher"      # bester Score < Schwelle
+    ABGELEHNT_UNGUELTIG = "abgelehnt_ungueltig"    # Validierung fehlgeschlagen
+    ABGELEHNT_PK_KONFLIKT = "abgelehnt_pk_konflikt"  # pk_konflikt=reject griff
+    ABGELEHNT_LADEFEHLER = "abgelehnt_ladefehler"  # Exception beim Load
 
 
-# --- validate-config ---------------------------------------------------------
+@dataclass
+class VerarbeitungsErgebnis:
+    """Vollstaendiges Resultat eines Datei-Durchlaufs.
 
-
-@cli.command("validate-config")
-@click.option(
-    "--catalog",
-    type=click.Path(exists=True, file_okay=False, path_type=Path),
-    default=DEFAULT_CATALOG,
-    show_default=True,
-)
-def validate_config(catalog: Path) -> None:
-    """Alle Konfigurationen im Katalog gegen das Meta-Schema pruefen."""
-    result = load_catalog(catalog)
-
-    for name, cfg in sorted(result.configs.items()):
-        click.secho(f"  OK      {name}", fg="green")
-        click.echo(
-            f"          {cfg.spalten_anzahl} Spalten, Trennzeichen "
-            f"'{cfg.datei.trennzeichen}', "
-            f"{'mit' if cfg.datei.hat_header else 'ohne'} Header "
-            f"-> Tabelle '{cfg.zielsystem.tabelle}'"
-        )
-
-    for name, fehler in sorted(result.fehler.items()):
-        click.secho(f"  FEHLER  {name}", fg="red")
-        for f in fehler:
-            click.echo(f"          - {f}")
-
-    click.echo()
-    if result.ok:
-        click.secho(f"Katalog gueltig ({len(result.configs)} Quellen).", fg="green")
-    else:
-        click.secho(f"{len(result.fehler)} fehlerhafte Konfiguration(en).", fg="red")
-        raise SystemExit(1)
-
-
-# --- import-file (interaktiv) ------------------------------------------------
-
-
-@cli.command("import-file")
-@click.argument("datei", type=click.Path(exists=True, dir_okay=False, path_type=Path))
-@click.option(
-    "--catalog",
-    type=click.Path(exists=True, file_okay=False, path_type=Path),
-    default=DEFAULT_CATALOG,
-    show_default=True,
-)
-@click.option(
-    "--db",
-    type=click.Path(dir_okay=False, path_type=Path),
-    default=DEFAULT_DB,
-    show_default=True,
-    help="Ziel-SQLite-Datenbank (wird bei Bedarf angelegt).",
-)
-@click.option("--archive", type=click.Path(file_okay=False, path_type=Path),
-              default=DEFAULT_ARCHIVE, show_default=True)
-@click.option("--reject", type=click.Path(file_okay=False, path_type=Path),
-              default=DEFAULT_REJECT, show_default=True)
-@click.option("--quelle", default=None, help="Quelle direkt vorgeben.")
-@click.option("--ja", is_flag=True, help="Besten Vorschlag ohne Rueckfrage uebernehmen.")
-@click.option("--no-move", is_flag=True,
-              help="Datei NICHT ins Archiv/Reject verschieben (nur verarbeiten).")
-def import_file(
-    datei: Path, catalog: Path, db: Path, archive: Path, reject: Path,
-    quelle: str | None, ja: bool, no_move: bool,
-) -> None:
-    """Eine Datei interaktiv erkennen, validieren, mappen und laden.
-
-    Bei Erfolg wird die Datei nach `archive/<quelle>/` verschoben,
-    bei Ablehnung nach `reject/` (mit Fehlerbericht daneben).
-    Mit `--no-move` bleibt sie am Originalort (fuer Ad-hoc-Tests).
+    Enthaelt alles, was der Aufrufer fuer Konsolenausgabe, Log und
+    Reject-Bericht braucht — die Engine hat keine Seiteneffekte auf
+    Dateisystem oder stdout, nur die DB.
     """
-    result = load_catalog(catalog)
-    if result.fehler:
-        click.secho(
-            f"Achtung: {len(result.fehler)} fehlerhafte Config(s) werden ignoriert.",
-            fg="yellow",
-        )
-    if not result.configs:
-        click.secho("Keine gueltigen Configs im Katalog.", fg="red")
-        raise SystemExit(1)
 
-    engine = ImportEngine(result.configs, db_pfad=db)
+    datei: Path
+    status: Status
+    quelle: str | None = None
+    score: float | None = None
+    ranking: VorschlagsRanking | None = None
+    zeilen_gesamt: int = 0
+    zeilen_geladen: int = 0
+    zeilen_uebersprungen: int = 0
+    zeilen_quarantaene: int = 0            # Zeilen, die im partiellen Modus abgelehnt wurden
+    fehler_grund: str = ""
+    fehler_details: list[str] = field(default_factory=list)
+    quarantaene_zeilen: list = field(default_factory=list)  # (nr, spalten, grund)
+    mapping: MappingErgebnis | None = None
+    cfg: QuellenConfig | None = None
 
-    # Quellenwahl: entweder vorgegeben oder ueber Ranking + User-Entscheidung
-    if quelle is None:
-        ranking = klassifiziere(datei, result.configs)
-        gewaehlt = _quelle_waehlen(ranking, result.configs, auto_ja=ja)
-        if gewaehlt is None:
-            raise SystemExit(1)
-        quelle = gewaehlt.name
+    @property
+    def erfolg(self) -> bool:
+        return self.status is Status.GELADEN
 
-    # --- Vorbereitung: Validierung + Mapping (KEIN Schreiben) ---
-    click.echo()
-    click.echo(f"Verarbeite '{datei.name}' als Quelle '{quelle}' ...")
-    ergebnis = engine.verarbeite_mit_quelle(datei, quelle)
+    @property
+    def bereit_zum_schreiben(self) -> bool:
+        """True, wenn Vorbereitung (Validierung + Mapping) erfolgreich
+        durchgelaufen ist, aber noch NICHT geschrieben wurde."""
+        return self.mapping is not None and self.status is Status.GELADEN
 
-    # Wenn schon die Vorbereitung fehlgeschlagen ist -> Reject
-    if not ergebnis.bereit_zum_schreiben:
-        _zeige_ergebnis(ergebnis)
-        if not no_move:
-            ziel = verschiebe_ins_reject(
-                datei, reject, ergebnis.fehler_grund, ergebnis.fehler_details
+
+class ImportEngine:
+    """Orchestriert Erkennung/Validierung/Mapping/Load fuer eine Datei."""
+
+    def __init__(
+        self,
+        configs: dict[str, QuellenConfig],
+        db_pfad: Path,
+        ladezeit: datetime | None = None,
+    ) -> None:
+        if not configs:
+            raise ValueError("Engine braucht mindestens eine Config.")
+        self.configs = configs
+        self.db_pfad = db_pfad
+        self.ladezeit = ladezeit or datetime.now()
+
+    # --- Modus 1: automatisch (Batch) ----------------------------------------
+
+    def verarbeite_auto(self, datei: Path) -> VerarbeitungsErgebnis:
+        """Vollautomatisch: beste Quelle waehlen, verarbeiten oder ablehnen.
+
+        Nur ueber dem quellenspezifischen Schwellenwert wird verarbeitet —
+        alles darunter ist zu unsicher fuer den Batch-Modus.
+        """
+        ranking = klassifiziere(datei, self.configs)
+        bester = ranking.bester
+
+        if bester is None:
+            return VerarbeitungsErgebnis(
+                datei=datei,
+                status=Status.ABGELEHNT_UNBEKANNT,
+                ranking=ranking,
+                fehler_grund="Keine Config passt zu dieser Datei",
+                fehler_details=[
+                    f"{e.quelle}: {e.ko_grund}" for e in ranking.ergebnisse
+                ],
             )
-            click.echo(f"  Verschoben nach Reject -> {ziel}")
-        raise SystemExit(1)
 
-    # --- Vorschau anzeigen ---
-    _zeige_vorschau(ergebnis)
-
-    # --- Bestaetigung einholen ---
-    if not ja and not click.confirm(
-        f"\nIn Tabelle '{ergebnis.cfg.zielsystem.tabelle}' schreiben?",  # type: ignore[union-attr]
-        default=False,
-    ):
-        click.secho("Abgebrochen — nichts geschrieben, Datei bleibt liegen.", fg="yellow")
-        raise SystemExit(0)
-
-    # --- Schreiben ---
-    click.echo()
-    click.echo("Schreibe in Zieltabelle ...")
-    engine.schreibe(ergebnis)
-    _zeige_ergebnis(ergebnis)
-
-    # --- Datei verschieben ---
-    if not no_move:
-        if ergebnis.erfolg:
-            ziel = verschiebe_ins_archiv(datei, archive, ergebnis.quelle)  # type: ignore[arg-type]
-            click.echo(f"  Archiviert -> {ziel}")
-        else:
-            ziel = verschiebe_ins_reject(
-                datei, reject, ergebnis.fehler_grund, ergebnis.fehler_details
+        cfg = self.configs[bester.quelle]
+        schwelle = cfg.klassifikation.schwellenwert
+        if bester.score < schwelle:
+            return VerarbeitungsErgebnis(
+                datei=datei,
+                status=Status.ABGELEHNT_UNSICHER,
+                quelle=bester.quelle,
+                score=bester.score,
+                ranking=ranking,
+                fehler_grund=(
+                    f"Kein sicherer Vorschlag "
+                    f"(bester Score {bester.score:.0%} < Schwellenwert {schwelle:.0%})"
+                ),
+                fehler_details=[self._ranking_zeile(e) for e in ranking.ergebnisse],
             )
-            click.echo(f"  Verschoben nach Reject -> {ziel}")
 
-    if not ergebnis.erfolg:
-        raise SystemExit(1)
+        return self._verarbeite_mit_quelle(datei, cfg, ranking, bester)
 
+    # --- Modus 2: mit vorgegebener Quelle (interaktiv oder --quelle) ---------
 
-def _quelle_waehlen(
-    ranking: VorschlagsRanking,
-    configs: dict[str, QuellenConfig],
-    auto_ja: bool,
-) -> QuellenConfig | None:
-    click.echo(f"Erkennung fuer '{ranking.datei.name}':")
-    kandidaten = [e for e in ranking.ergebnisse if e.moeglich]
+    def verarbeite_mit_quelle(
+        self, datei: Path, quelle: str
+    ) -> VerarbeitungsErgebnis:
+        """Mit fest gewaehlter Quelle: Erkennung uebersprungen, direkt validieren."""
+        if quelle not in self.configs:
+            raise ValueError(
+                f"Quelle '{quelle}' nicht im Katalog. Verfuegbar: "
+                f"{sorted(self.configs)}"
+            )
+        return self._verarbeite_mit_quelle(datei, self.configs[quelle], None, None)
 
-    for i, e in enumerate(ranking.ergebnisse, start=1):
-        if e.moeglich:
-            balken = "#" * round(e.score * 10)
-            click.echo(f"  {i}. {e.quelle:<24} [{balken:<10}] {e.score:>4.0%}")
-        else:
-            click.secho(f"  -  {e.quelle:<24} K.O. — {e.ko_grund}", dim=True)
+    # --- gemeinsamer Kern ----------------------------------------------------
 
-    if not kandidaten:
-        click.echo()
-        click.secho("Keine Quelle im Katalog passt zu dieser Datei.", fg="yellow")
-        click.echo(
-            "-> Hier startet spaeter der Assistent zum Anlegen einer neuen Config."
+    def _verarbeite_mit_quelle(
+        self,
+        datei: Path,
+        cfg: QuellenConfig,
+        ranking: VorschlagsRanking | None,
+        bester: KlassifikationsErgebnis | None,
+    ) -> VerarbeitungsErgebnis:
+        """Vorbereitung: Validierung + Mapping. KEIN Load.
+
+        Zwei Modi je nach Config `zielsystem.fehler_modus`:
+          - alles_oder_nichts (Default): erste Fehler -> Abbruch
+          - partiell: gute Zeilen weiter verarbeiten, kaputte Zeilen fuer
+            eine spaetere Quarantaene-Datei aufheben.
+        """
+        partiell = cfg.zielsystem.fehler_modus == "partiell"
+        e = VerarbeitungsErgebnis(
+            datei=datei,
+            status=Status.GELADEN,
+            quelle=cfg.name,
+            score=bester.score if bester else None,
+            ranking=ranking,
+            cfg=cfg,
         )
-        return None
 
-    bester = kandidaten[0]
-    schwelle = configs[bester.quelle].klassifikation.schwellenwert
-    sicher = bester.score >= schwelle
+        v = validiere(datei, cfg, partiell=partiell)
+        e.zeilen_gesamt = v.zeilen_gesamt
 
-    click.echo()
-    if sicher:
-        click.echo(f"Vorschlag: {bester.quelle} (Score {bester.score:.0%})")
-    else:
-        click.secho(
-            f"Kein sicherer Vorschlag (bester Score {bester.score:.0%} liegt "
-            f"unter Schwellenwert {schwelle:.0%}) — bitte Quelle manuell waehlen.",
-            fg="yellow",
-        )
-
-    if auto_ja:
-        if sicher:
-            click.echo("(--ja: Vorschlag automatisch uebernommen)")
-            return configs[bester.quelle]
-        click.secho("(--ja gesetzt, aber kein sicherer Vorschlag -> Abbruch)", fg="red")
-        return None
-
-    auswahl = click.prompt(
-        f"Quelle uebernehmen? [Enter={1 if sicher else 'Nummer waehlen'}, "
-        f"Nummer=andere Quelle, n=neue Config, a=abbrechen]",
-        default="1" if sicher else "",
-        show_default=False,
-    ).strip().lower()
-
-    if auswahl == "a":
-        click.echo("Abgebrochen.")
-        return None
-    if auswahl == "n":
-        click.echo("-> Assistent zum Anlegen einer neuen Config folgt.")
-        return None
-    if auswahl.isdigit():
-        idx = int(auswahl) - 1
-        if 0 <= idx < len(ranking.ergebnisse):
-            gew = ranking.ergebnisse[idx]
-            if not gew.moeglich:
-                click.secho(
-                    f"'{gew.quelle}' wurde per K.O. ausgeschlossen ({gew.ko_grund}).",
-                    fg="red",
+        if not partiell:
+            # Klassisch: ein Fehler -> alles ablehnen
+            if not v.ok:
+                e.status = Status.ABGELEHNT_UNGUELTIG
+                e.fehler_grund = (
+                    f"{v.zeilen_fehlerhaft} von {v.zeilen_gesamt} Zeilen fehlerhaft"
+                    + (" (Anzeige nach 50 Fehlern abgebrochen)" if v.abgebrochen else "")
                 )
-                return None
-            return configs[gew.quelle]
-    click.secho("Ungueltige Eingabe — Abbruch.", fg="red")
-    return None
+                e.fehler_details = [str(f) for f in v.fehler]
+                return e
+            gute_zeilen = None  # kein Filter, alle mappen
+        else:
+            # Partieller Modus: Fehler sammeln, gute Zeilen mappen
+            e.zeilen_quarantaene = v.zeilen_fehlerhaft
+            e.fehler_details = [str(f) for f in v.fehler]
+            e.quarantaene_zeilen = self._quarantaene_zeilen_lesen(datei, cfg, v)
+            gute_zeilen = v.gute_zeilen
 
+            if not v.gute_zeilen:
+                # Alle Zeilen kaputt -> keine sinnvolle Ladung mehr
+                e.status = Status.ABGELEHNT_UNGUELTIG
+                e.fehler_grund = (
+                    f"Alle {v.zeilen_gesamt} Zeilen fehlerhaft "
+                    "(partieller Modus, aber nichts zu laden)"
+                )
+                return e
 
-# --- run (Batch-Modus) -------------------------------------------------------
+        try:
+            e.mapping = mappe(datei, cfg, ladezeit=self.ladezeit, nur_zeilen=gute_zeilen)
+        except Exception as ex:
+            logger.exception("Mapping-Fehler fuer %s", datei.name)
+            e.status = Status.ABGELEHNT_LADEFEHLER
+            e.fehler_grund = f"Fehler beim Mapping: {ex}"
 
+        return e
 
-@cli.command("run")
-@click.option("--catalog", type=click.Path(exists=True, file_okay=False, path_type=Path),
-              default=DEFAULT_CATALOG, show_default=True)
-@click.option("--ingest", type=click.Path(file_okay=False, path_type=Path),
-              default=DEFAULT_INGEST, show_default=True)
-@click.option("--archive", type=click.Path(file_okay=False, path_type=Path),
-              default=DEFAULT_ARCHIVE, show_default=True)
-@click.option("--reject", type=click.Path(file_okay=False, path_type=Path),
-              default=DEFAULT_REJECT, show_default=True)
-@click.option("--db", type=click.Path(dir_okay=False, path_type=Path),
-              default=DEFAULT_DB, show_default=True)
-def run(
-    catalog: Path, ingest: Path, archive: Path, reject: Path, db: Path
-) -> None:
-    """Alle Dateien im Ingest-Verzeichnis automatisch verarbeiten."""
-    result = load_catalog(catalog)
-    if not result.configs:
-        click.secho("Keine gueltigen Configs im Katalog — Abbruch.", fg="red")
-        raise SystemExit(1)
+    @staticmethod
+    def _quarantaene_zeilen_lesen(
+        datei: Path, cfg: QuellenConfig, v
+    ) -> list:
+        """Fuer den partiellen Modus: originale Rohzeilen der fehlerhaften
+        Zeilen einlesen, damit sie in die Quarantaene-CSV geschrieben werden
+        koennen. Bezieht Fehlergruende pro Zeile aus dem Validierungsergebnis."""
+        import csv as _csv
 
-    dateien = scanne_ingest(ingest)
-    if not dateien:
-        click.echo(f"Keine Dateien in {ingest}.")
-        return
+        fehler_nach_zeile: dict[int, list[str]] = {}
+        for f in v.fehler:
+            fehler_nach_zeile.setdefault(f.zeile, []).append(
+                f.grund if f.spalte is None else f"{f.spalte}: {f.grund}"
+            )
 
-    engine = ImportEngine(result.configs, db_pfad=db)
-    click.echo(f"Verarbeite {len(dateien)} Datei(en) aus {ingest} ...")
-    click.echo()
+        ergebnis = []
+        with open(datei, newline="", encoding=cfg.datei.encoding) as fh:
+            reader = _csv.reader(fh, delimiter=cfg.datei.trennzeichen)
+            start = 2 if cfg.datei.hat_header else 1
+            if cfg.datei.hat_header:
+                next(reader, None)
+            for nr, zeile in enumerate(reader, start=start):
+                if not zeile:
+                    continue
+                if nr in fehler_nach_zeile:
+                    grund = " | ".join(fehler_nach_zeile[nr])
+                    ergebnis.append((nr, list(zeile), grund))
+        return ergebnis
 
-    stats: dict[str, int] = {}
-    for datei in dateien:
-        status = _auto_verarbeiten(datei, engine, archive, reject)
-        stats[status] = stats.get(status, 0) + 1
+    def schreibe(self, ergebnis: VerarbeitungsErgebnis) -> VerarbeitungsErgebnis:
+        """Fuehrt den Load-Schritt aus. Setzt voraus, dass das Ergebnis
+        `bereit_zum_schreiben` ist (Validierung + Mapping durchgelaufen).
 
-    click.echo()
-    geladen = stats.get(Status.GELADEN.value, 0)
-    abgelehnt = sum(v for k, v in stats.items() if k != Status.GELADEN.value)
-    click.secho(
-        f"Fertig: {geladen} geladen, {abgelehnt} abgelehnt.",
-        fg="green" if abgelehnt == 0 else "yellow",
-    )
+        Ist gedacht als zweiter Schritt nach `verarbeite_mit_quelle`/
+        `verarbeite_auto` — dazwischen kann der Aufrufer eine Vorschau
+        anzeigen und eine User-Bestaetigung einholen.
+        """
+        if not ergebnis.bereit_zum_schreiben:
+            raise ValueError(
+                "schreibe() nur aufrufen, wenn ergebnis.bereit_zum_schreiben True ist."
+            )
+        assert ergebnis.mapping is not None and ergebnis.cfg is not None
 
+        try:
+            l = lade_sqlite(ergebnis.mapping, ergebnis.cfg, self.db_pfad)
+            ergebnis.zeilen_geladen = l.zeilen_geladen
+            ergebnis.zeilen_uebersprungen = l.zeilen_uebersprungen
+        except PKKonfliktFehler as ex:
+            ergebnis.status = Status.ABGELEHNT_PK_KONFLIKT
+            ergebnis.fehler_grund = str(ex)
+        except Exception as ex:
+            logger.exception("Load-Fehler fuer %s", ergebnis.datei.name)
+            ergebnis.status = Status.ABGELEHNT_LADEFEHLER
+            ergebnis.fehler_grund = f"Fehler beim Laden: {ex}"
 
-def _auto_verarbeiten(
-    datei: Path, engine: ImportEngine, archive: Path, reject: Path
-) -> str:
-    """Eine Datei automatisch verarbeiten und archivieren/rejecten.
+        return ergebnis
 
-    Gemeinsame Logik von `run` (einmalig) und `watch` (kontinuierlich).
-    Gibt den Status-Wert zurueck (fuer Statistik).
-    """
-    click.echo(f"[{datei.name}]")
-    ergebnis = engine.verarbeite_auto_und_schreibe(datei)
+    def verarbeite_auto_und_schreibe(self, datei: Path) -> VerarbeitungsErgebnis:
+        """Batch-Convenience: `verarbeite_auto()` + direkt `schreibe()`.
 
-    if ergebnis.quelle:
-        click.echo(
-            f"  Erkannt als '{ergebnis.quelle}' (Score {ergebnis.score:.0%})"
-        )
+        Wird vom `run`/`watch`-Modus verwendet — dort ist keine
+        User-Bestaetigung vorgesehen, weil unbeaufsichtigt.
+        """
+        e = self.verarbeite_auto(datei)
+        if e.bereit_zum_schreiben:
+            self.schreibe(e)
+        return e
 
-    if ergebnis.erfolg:
-        verschiebe_ins_archiv(datei, archive, ergebnis.quelle)  # type: ignore[arg-type]
-        click.secho(
-            f"  -> geladen ({ergebnis.zeilen_geladen} Datensaetze)", fg="green"
-        )
-    else:
-        verschiebe_ins_reject(
-            datei, reject, ergebnis.fehler_grund, ergebnis.fehler_details
-        )
-        click.secho(f"  -> abgelehnt: {ergebnis.fehler_grund}", fg="red")
-
-    return ergebnis.status.value
-
-
-# --- watch (kontinuierliche Ueberwachung) ------------------------------------
-
-
-@cli.command("watch")
-@click.option("--catalog", type=click.Path(exists=True, file_okay=False, path_type=Path),
-              default=DEFAULT_CATALOG, show_default=True)
-@click.option("--ingest", type=click.Path(file_okay=False, path_type=Path),
-              default=DEFAULT_INGEST, show_default=True)
-@click.option("--archive", type=click.Path(file_okay=False, path_type=Path),
-              default=DEFAULT_ARCHIVE, show_default=True)
-@click.option("--reject", type=click.Path(file_okay=False, path_type=Path),
-              default=DEFAULT_REJECT, show_default=True)
-@click.option("--db", type=click.Path(dir_okay=False, path_type=Path),
-              default=DEFAULT_DB, show_default=True)
-def watch(
-    catalog: Path, ingest: Path, archive: Path, reject: Path, db: Path
-) -> None:
-    """Ingest-Verzeichnis dauerhaft ueberwachen. Neue Dateien werden
-    automatisch verarbeitet. Beenden mit Strg+C."""
-    import time
-
-    result = load_catalog(catalog)
-    if not result.configs:
-        click.secho("Keine gueltigen Configs im Katalog — Abbruch.", fg="red")
-        raise SystemExit(1)
-
-    engine = ImportEngine(result.configs, db_pfad=db)
-
-    # 1. Alles bereits Liegende einmal verarbeiten (Aufholrunde).
-    bestehende = scanne_ingest(ingest)
-    if bestehende:
-        click.echo(f"Aufholrunde: {len(bestehende)} bereits liegende Datei(en) ...")
-        for datei in bestehende:
-            _auto_verarbeiten(datei, engine, archive, reject)
-        click.echo()
-
-    # 2. Dann in den Watch-Modus wechseln.
-    click.secho(
-        f"Watch aktiv auf {ingest} — Strg+C zum Beenden.", fg="cyan"
-    )
-    observer = starte_watch(
-        ingest, lambda p: _auto_verarbeiten(p, engine, archive, reject)
-    )
-    try:
-        while True:
-            time.sleep(1)
-    except KeyboardInterrupt:
-        click.echo()
-        click.echo("Beende Watch ...")
-    finally:
-        observer.stop()
-        observer.join()
-
-
-# --- Ergebnis-Anzeige (import-file) ------------------------------------------
-
-
-def _zeige_vorschau(e: VerarbeitungsErgebnis, max_zeilen: int = 5) -> None:
-    """Vorschau des Mapping-Ergebnisses fuer die Bestaetigungs-Rueckfrage.
-
-    Zeigt Zieltabellenname, Statistik und die ersten N gemappten Zeilen —
-    genau die Werte, die gleich in die DB geschrieben wuerden.
-    """
-    assert e.mapping is not None and e.cfg is not None
-
-    click.echo()
-    click.secho(
-        f"  Vorschau: {e.zeilen_gesamt} Datensaetze -> "
-        f"Tabelle '{e.cfg.zielsystem.tabelle}' "
-        f"(pk_konflikt: {e.cfg.zielsystem.pk_konflikt})",
-        fg="cyan",
-    )
-    click.echo()
-
-    zielfelder = e.mapping.zielfelder
-    saetze = e.mapping.saetze[:max_zeilen]
-
-    # Spaltenbreiten dynamisch bestimmen fuer sauberen Tabellendruck
-    breiten = {f: max(len(f), max((len(str(s.get(f))) for s in saetze), default=0))
-               for f in zielfelder}
-
-    header = " | ".join(f.ljust(breiten[f]) for f in zielfelder)
-    trenner = "-+-".join("-" * breiten[f] for f in zielfelder)
-    click.echo("  " + header)
-    click.echo("  " + trenner)
-    for satz in saetze:
-        zeile = " | ".join(str(satz.get(f) if satz.get(f) is not None else "")
-                          .ljust(breiten[f]) for f in zielfelder)
-        click.echo("  " + zeile)
-
-    wenigere = len(e.mapping.saetze) - len(saetze)
-    if wenigere > 0:
-        click.echo(f"  ... und {wenigere} weitere Datensaetze")
-
-
-def _zeige_ergebnis(e: VerarbeitungsErgebnis) -> None:
-    if e.status is Status.GELADEN:
-        text = (
-            f"  OK — {e.zeilen_geladen} Datensaetze geladen "
-            f"(von {e.zeilen_gesamt} validierten Zeilen)"
-        )
-        if e.zeilen_uebersprungen:
-            text += f", {e.zeilen_uebersprungen} uebersprungen (PK existierte)"
-        click.secho(text + ".", fg="green")
-        return
-
-    click.secho(f"  ABGELEHNT — {e.fehler_grund}:", fg="red")
-    for d in e.fehler_details[:50]:
-        click.echo(f"    {d}")
-
-
-if __name__ == "__main__":
-    cli()
+    @staticmethod
+    def _ranking_zeile(e: KlassifikationsErgebnis) -> str:
+        if e.moeglich:
+            return f"{e.quelle}: Score {e.score:.0%}"
+        return f"{e.quelle}: K.O. — {e.ko_grund}"
