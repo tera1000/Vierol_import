@@ -22,8 +22,14 @@ from __future__ import annotations
 
 import logging
 import shutil
+import time
 from datetime import datetime
 from pathlib import Path
+from typing import Callable
+
+from watchdog.events import FileCreatedEvent, FileMovedEvent, FileSystemEventHandler
+from watchdog.observers import Observer
+from watchdog.observers.api import BaseObserver
 
 logger = logging.getLogger(__name__)
 
@@ -102,3 +108,77 @@ def _bericht_text(
         zeilen.append("Details:")
         zeilen.extend(f"  - {d}" for d in details)
     return "\n".join(zeilen) + "\n"
+
+
+# --- watch-Modus (dauerhafte Verzeichnisueberwachung) ------------------------
+
+
+class _IngestHandler(FileSystemEventHandler):
+    """Reagiert auf neue Dateien im Ingest-Verzeichnis.
+
+    Zwei Ereignisse loesen aus:
+      * created — Datei komplett neu geschrieben (z. B. per Editor)
+      * moved   — Datei per rename/move in den Ordner geschoben
+                  (das ist der Standardweg bei FTP/SMB, weil dabei
+                  atomar aus einem temporaeren Namen umbenannt wird)
+
+    Der `_stabil_warten`-Trick verhindert, dass wir eine Datei
+    anfassen, waehrend sie noch geschrieben wird — wir warten, bis
+    ihre Groesse zwei Ticks lang gleich bleibt.
+    """
+
+    def __init__(self, callback: Callable[[Path], None]) -> None:
+        super().__init__()
+        self._callback = callback
+
+    def on_created(self, event: FileCreatedEvent) -> None:
+        if event.is_directory:
+            return
+        self._verarbeite(Path(event.src_path))
+
+    def on_moved(self, event: FileMovedEvent) -> None:
+        if event.is_directory:
+            return
+        self._verarbeite(Path(event.dest_path))
+
+    def _verarbeite(self, pfad: Path) -> None:
+        if not pfad.exists() or pfad.name.startswith("."):
+            return
+        if not _stabil_warten(pfad):
+            logger.warning("Datei %s wurde nicht stabil — uebersprungen.", pfad.name)
+            return
+        try:
+            self._callback(pfad)
+        except Exception:
+            logger.exception("Fehler beim Verarbeiten von %s", pfad.name)
+
+
+def _stabil_warten(
+    pfad: Path, ticks: int = 3, intervall: float = 0.5
+) -> bool:
+    """Warten, bis die Dateigroesse in aufeinanderfolgenden Ticks
+    unveraendert bleibt — dann ist der Schreibvorgang durch."""
+    letzte = -1
+    for _ in range(ticks):
+        try:
+            aktuelle = pfad.stat().st_size
+        except FileNotFoundError:
+            return False
+        if aktuelle == letzte:
+            return True
+        letzte = aktuelle
+        time.sleep(intervall)
+    return False
+
+
+def starte_watch(
+    ingest_dir: Path, callback: Callable[[Path], None]
+) -> BaseObserver:
+    """Beobachter starten (nicht-blockierend). Aufrufer ist fuer Stop/join zustaendig."""
+    ingest_dir.mkdir(parents=True, exist_ok=True)
+    handler = _IngestHandler(callback)
+    observer = Observer()
+    observer.schedule(handler, str(ingest_dir), recursive=False)
+    observer.start()
+    logger.info("Watch aktiv auf %s", ingest_dir)
+    return observer

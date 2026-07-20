@@ -1,5 +1,5 @@
 name: topmotive
-beschreibung: "topmotive (Hersteller, OE-Nummer, Preis) — pipe-getrennt, headerlos"
+beschreibung: "US OE-Bruttopreise (Hersteller, OE-Nummer, Preis) — pipe-getrennt, headerlos"
 
 datei:
   trennzeichen: "|"
@@ -72,3 +72,4 @@ zielsystem:
   upsert_key:
     - hersteller
     - oeno
+  pk_konflikt: skip     # PK existiert bereits -> neuen Datensatz ueberspringen

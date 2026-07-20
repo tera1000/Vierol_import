@@ -38,8 +38,8 @@ from vierol_import.classification.classifier import (
     VorschlagsRanking,
     klassifiziere,
 )
-from vierol_import.loading.loader import lade_sqlite
-from vierol_import.mapping.mapper import mappe
+from vierol_import.loading.loader import PKKonfliktFehler, lade_sqlite
+from vierol_import.mapping.mapper import MappingErgebnis, mappe
 from vierol_import.validation.validator import ValidierungsFehler, validiere
 
 logger = logging.getLogger(__name__)
@@ -52,6 +52,7 @@ class Status(str, Enum):
     ABGELEHNT_UNBEKANNT = "abgelehnt_unbekannt"    # keine Config passt
     ABGELEHNT_UNSICHER = "abgelehnt_unsicher"      # bester Score < Schwelle
     ABGELEHNT_UNGUELTIG = "abgelehnt_ungueltig"    # Validierung fehlgeschlagen
+    ABGELEHNT_PK_KONFLIKT = "abgelehnt_pk_konflikt"  # pk_konflikt=reject griff
     ABGELEHNT_LADEFEHLER = "abgelehnt_ladefehler"  # Exception beim Load
 
 
@@ -71,12 +72,21 @@ class VerarbeitungsErgebnis:
     ranking: VorschlagsRanking | None = None
     zeilen_gesamt: int = 0
     zeilen_geladen: int = 0
+    zeilen_uebersprungen: int = 0          # PK existierte bereits (Modus skip)
     fehler_grund: str = ""
     fehler_details: list[str] = field(default_factory=list)
+    mapping: MappingErgebnis | None = None  # fuer Vorschau (nur bei Erfolg der ersten Stufen)
+    cfg: QuellenConfig | None = None        # Config-Referenz fuer den Load-Aufruf
 
     @property
     def erfolg(self) -> bool:
         return self.status is Status.GELADEN
+
+    @property
+    def bereit_zum_schreiben(self) -> bool:
+        """True, wenn Vorbereitung (Validierung + Mapping) erfolgreich
+        durchgelaufen ist, aber noch NICHT geschrieben wurde."""
+        return self.mapping is not None and self.status is Status.GELADEN
 
 
 class ImportEngine:
@@ -156,12 +166,20 @@ class ImportEngine:
         ranking: VorschlagsRanking | None,
         bester: KlassifikationsErgebnis | None,
     ) -> VerarbeitungsErgebnis:
+        """Vorbereitung: Validierung + Mapping. KEIN Load.
+
+        Der Aufrufer entscheidet danach (mit User-Bestaetigung), ob
+        `schreibe()` aufgerufen wird. So kann eine Vorschau des
+        MappingErgebnisses angezeigt werden, bevor Daten die
+        Zieltabelle beruehren.
+        """
         e = VerarbeitungsErgebnis(
             datei=datei,
-            status=Status.GELADEN,  # optimistisch, wird bei Fehler ueberschrieben
+            status=Status.GELADEN,  # optimistisch — wird bei Fehler ueberschrieben
             quelle=cfg.name,
             score=bester.score if bester else None,
             ranking=ranking,
+            cfg=cfg,
         )
 
         v = validiere(datei, cfg)
@@ -176,14 +194,51 @@ class ImportEngine:
             return e
 
         try:
-            m = mappe(datei, cfg, ladezeit=self.ladezeit)
-            l = lade_sqlite(m, cfg, self.db_pfad)
-            e.zeilen_geladen = l.zeilen_geladen
+            e.mapping = mappe(datei, cfg, ladezeit=self.ladezeit)
         except Exception as ex:
-            logger.exception("Load-Fehler fuer %s", datei.name)
+            logger.exception("Mapping-Fehler fuer %s", datei.name)
             e.status = Status.ABGELEHNT_LADEFEHLER
-            e.fehler_grund = f"Fehler beim Laden: {ex}"
+            e.fehler_grund = f"Fehler beim Mapping: {ex}"
 
+        return e
+
+    def schreibe(self, ergebnis: VerarbeitungsErgebnis) -> VerarbeitungsErgebnis:
+        """Fuehrt den Load-Schritt aus. Setzt voraus, dass das Ergebnis
+        `bereit_zum_schreiben` ist (Validierung + Mapping durchgelaufen).
+
+        Ist gedacht als zweiter Schritt nach `verarbeite_mit_quelle`/
+        `verarbeite_auto` — dazwischen kann der Aufrufer eine Vorschau
+        anzeigen und eine User-Bestaetigung einholen.
+        """
+        if not ergebnis.bereit_zum_schreiben:
+            raise ValueError(
+                "schreibe() nur aufrufen, wenn ergebnis.bereit_zum_schreiben True ist."
+            )
+        assert ergebnis.mapping is not None and ergebnis.cfg is not None
+
+        try:
+            l = lade_sqlite(ergebnis.mapping, ergebnis.cfg, self.db_pfad)
+            ergebnis.zeilen_geladen = l.zeilen_geladen
+            ergebnis.zeilen_uebersprungen = l.zeilen_uebersprungen
+        except PKKonfliktFehler as ex:
+            ergebnis.status = Status.ABGELEHNT_PK_KONFLIKT
+            ergebnis.fehler_grund = str(ex)
+        except Exception as ex:
+            logger.exception("Load-Fehler fuer %s", ergebnis.datei.name)
+            ergebnis.status = Status.ABGELEHNT_LADEFEHLER
+            ergebnis.fehler_grund = f"Fehler beim Laden: {ex}"
+
+        return ergebnis
+
+    def verarbeite_auto_und_schreibe(self, datei: Path) -> VerarbeitungsErgebnis:
+        """Batch-Convenience: `verarbeite_auto()` + direkt `schreibe()`.
+
+        Wird vom `run`/`watch`-Modus verwendet — dort ist keine
+        User-Bestaetigung vorgesehen, weil unbeaufsichtigt.
+        """
+        e = self.verarbeite_auto(datei)
+        if e.bereit_zum_schreiben:
+            self.schreibe(e)
         return e
 
     @staticmethod

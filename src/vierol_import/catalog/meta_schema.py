@@ -181,6 +181,15 @@ class ZielsystemConfig(StrictModel):
     typ: Literal["sqlite"] = "sqlite"
     tabelle: str
     upsert_key: list[str] = Field(default_factory=list)
+    pk_konflikt: Literal["skip", "update", "reject"] = Field(
+        default="skip",
+        description=(
+            "Verhalten bei bereits existierendem Primaerschluessel:\n"
+            "  - skip   (Default): neuen Datensatz ueberspringen, alten behalten\n"
+            "  - update: neuen Datensatz einspielen, alten ueberschreiben\n"
+            "  - reject: ganze Datei ablehnen, wenn auch nur ein Konflikt auftritt"
+        ),
+    )
 
 
 # --- Gesamt-Konfiguration -----------------------------------------------------

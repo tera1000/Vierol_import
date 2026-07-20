@@ -25,6 +25,7 @@ from vierol_import.classification.classifier import VorschlagsRanking, klassifiz
 from vierol_import.engine import ImportEngine, Status, VerarbeitungsErgebnis
 from vierol_import.ingest.watcher import (
     scanne_ingest,
+    starte_watch,
     verschiebe_ins_archiv,
     verschiebe_ins_reject,
 )
@@ -100,12 +101,24 @@ def validate_config(catalog: Path) -> None:
     show_default=True,
     help="Ziel-SQLite-Datenbank (wird bei Bedarf angelegt).",
 )
+@click.option("--archive", type=click.Path(file_okay=False, path_type=Path),
+              default=DEFAULT_ARCHIVE, show_default=True)
+@click.option("--reject", type=click.Path(file_okay=False, path_type=Path),
+              default=DEFAULT_REJECT, show_default=True)
 @click.option("--quelle", default=None, help="Quelle direkt vorgeben.")
 @click.option("--ja", is_flag=True, help="Besten Vorschlag ohne Rueckfrage uebernehmen.")
+@click.option("--no-move", is_flag=True,
+              help="Datei NICHT ins Archiv/Reject verschieben (nur verarbeiten).")
 def import_file(
-    datei: Path, catalog: Path, db: Path, quelle: str | None, ja: bool
+    datei: Path, catalog: Path, db: Path, archive: Path, reject: Path,
+    quelle: str | None, ja: bool, no_move: bool,
 ) -> None:
-    """Eine Datei interaktiv erkennen, validieren, mappen und laden."""
+    """Eine Datei interaktiv erkennen, validieren, mappen und laden.
+
+    Bei Erfolg wird die Datei nach `archive/<quelle>/` verschoben,
+    bei Ablehnung nach `reject/` (mit Fehlerbericht daneben).
+    Mit `--no-move` bleibt sie am Originalort (fuer Ad-hoc-Tests).
+    """
     result = load_catalog(catalog)
     if result.fehler:
         click.secho(
@@ -126,10 +139,49 @@ def import_file(
             raise SystemExit(1)
         quelle = gewaehlt.name
 
+    # --- Vorbereitung: Validierung + Mapping (KEIN Schreiben) ---
     click.echo()
     click.echo(f"Verarbeite '{datei.name}' als Quelle '{quelle}' ...")
     ergebnis = engine.verarbeite_mit_quelle(datei, quelle)
+
+    # Wenn schon die Vorbereitung fehlgeschlagen ist -> Reject
+    if not ergebnis.bereit_zum_schreiben:
+        _zeige_ergebnis(ergebnis)
+        if not no_move:
+            ziel = verschiebe_ins_reject(
+                datei, reject, ergebnis.fehler_grund, ergebnis.fehler_details
+            )
+            click.echo(f"  Verschoben nach Reject -> {ziel}")
+        raise SystemExit(1)
+
+    # --- Vorschau anzeigen ---
+    _zeige_vorschau(ergebnis)
+
+    # --- Bestaetigung einholen ---
+    if not ja and not click.confirm(
+        f"\nIn Tabelle '{ergebnis.cfg.zielsystem.tabelle}' schreiben?",  # type: ignore[union-attr]
+        default=False,
+    ):
+        click.secho("Abgebrochen — nichts geschrieben, Datei bleibt liegen.", fg="yellow")
+        raise SystemExit(0)
+
+    # --- Schreiben ---
+    click.echo()
+    click.echo("Schreibe in Zieltabelle ...")
+    engine.schreibe(ergebnis)
     _zeige_ergebnis(ergebnis)
+
+    # --- Datei verschieben ---
+    if not no_move:
+        if ergebnis.erfolg:
+            ziel = verschiebe_ins_archiv(datei, archive, ergebnis.quelle)  # type: ignore[arg-type]
+            click.echo(f"  Archiviert -> {ziel}")
+        else:
+            ziel = verschiebe_ins_reject(
+                datei, reject, ergebnis.fehler_grund, ergebnis.fehler_details
+            )
+            click.echo(f"  Verschoben nach Reject -> {ziel}")
+
     if not ergebnis.erfolg:
         raise SystemExit(1)
 
@@ -240,25 +292,8 @@ def run(
 
     stats: dict[str, int] = {}
     for datei in dateien:
-        click.echo(f"[{datei.name}]")
-        ergebnis = engine.verarbeite_auto(datei)
-
-        if ergebnis.quelle:
-            click.echo(f"  Erkannt als '{ergebnis.quelle}' "
-                       f"(Score {ergebnis.score:.0%})")
-
-        if ergebnis.erfolg:
-            verschiebe_ins_archiv(datei, archive, ergebnis.quelle)  # type: ignore[arg-type]
-            click.secho(
-                f"  -> geladen ({ergebnis.zeilen_geladen} Datensaetze)", fg="green"
-            )
-        else:
-            verschiebe_ins_reject(
-                datei, reject, ergebnis.fehler_grund, ergebnis.fehler_details
-            )
-            click.secho(f"  -> abgelehnt: {ergebnis.fehler_grund}", fg="red")
-
-        stats[ergebnis.status.value] = stats.get(ergebnis.status.value, 0) + 1
+        status = _auto_verarbeiten(datei, engine, archive, reject)
+        stats[status] = stats.get(status, 0) + 1
 
     click.echo()
     geladen = stats.get(Status.GELADEN.value, 0)
@@ -269,16 +304,140 @@ def run(
     )
 
 
+def _auto_verarbeiten(
+    datei: Path, engine: ImportEngine, archive: Path, reject: Path
+) -> str:
+    """Eine Datei automatisch verarbeiten und archivieren/rejecten.
+
+    Gemeinsame Logik von `run` (einmalig) und `watch` (kontinuierlich).
+    Gibt den Status-Wert zurueck (fuer Statistik).
+    """
+    click.echo(f"[{datei.name}]")
+    ergebnis = engine.verarbeite_auto_und_schreibe(datei)
+
+    if ergebnis.quelle:
+        click.echo(
+            f"  Erkannt als '{ergebnis.quelle}' (Score {ergebnis.score:.0%})"
+        )
+
+    if ergebnis.erfolg:
+        verschiebe_ins_archiv(datei, archive, ergebnis.quelle)  # type: ignore[arg-type]
+        click.secho(
+            f"  -> geladen ({ergebnis.zeilen_geladen} Datensaetze)", fg="green"
+        )
+    else:
+        verschiebe_ins_reject(
+            datei, reject, ergebnis.fehler_grund, ergebnis.fehler_details
+        )
+        click.secho(f"  -> abgelehnt: {ergebnis.fehler_grund}", fg="red")
+
+    return ergebnis.status.value
+
+
+# --- watch (kontinuierliche Ueberwachung) ------------------------------------
+
+
+@cli.command("watch")
+@click.option("--catalog", type=click.Path(exists=True, file_okay=False, path_type=Path),
+              default=DEFAULT_CATALOG, show_default=True)
+@click.option("--ingest", type=click.Path(file_okay=False, path_type=Path),
+              default=DEFAULT_INGEST, show_default=True)
+@click.option("--archive", type=click.Path(file_okay=False, path_type=Path),
+              default=DEFAULT_ARCHIVE, show_default=True)
+@click.option("--reject", type=click.Path(file_okay=False, path_type=Path),
+              default=DEFAULT_REJECT, show_default=True)
+@click.option("--db", type=click.Path(dir_okay=False, path_type=Path),
+              default=DEFAULT_DB, show_default=True)
+def watch(
+    catalog: Path, ingest: Path, archive: Path, reject: Path, db: Path
+) -> None:
+    """Ingest-Verzeichnis dauerhaft ueberwachen. Neue Dateien werden
+    automatisch verarbeitet. Beenden mit Strg+C."""
+    import time
+
+    result = load_catalog(catalog)
+    if not result.configs:
+        click.secho("Keine gueltigen Configs im Katalog — Abbruch.", fg="red")
+        raise SystemExit(1)
+
+    engine = ImportEngine(result.configs, db_pfad=db)
+
+    # 1. Alles bereits Liegende einmal verarbeiten (Aufholrunde).
+    bestehende = scanne_ingest(ingest)
+    if bestehende:
+        click.echo(f"Aufholrunde: {len(bestehende)} bereits liegende Datei(en) ...")
+        for datei in bestehende:
+            _auto_verarbeiten(datei, engine, archive, reject)
+        click.echo()
+
+    # 2. Dann in den Watch-Modus wechseln.
+    click.secho(
+        f"Watch aktiv auf {ingest} — Strg+C zum Beenden.", fg="cyan"
+    )
+    observer = starte_watch(
+        ingest, lambda p: _auto_verarbeiten(p, engine, archive, reject)
+    )
+    try:
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        click.echo()
+        click.echo("Beende Watch ...")
+    finally:
+        observer.stop()
+        observer.join()
+
+
 # --- Ergebnis-Anzeige (import-file) ------------------------------------------
+
+
+def _zeige_vorschau(e: VerarbeitungsErgebnis, max_zeilen: int = 5) -> None:
+    """Vorschau des Mapping-Ergebnisses fuer die Bestaetigungs-Rueckfrage.
+
+    Zeigt Zieltabellenname, Statistik und die ersten N gemappten Zeilen —
+    genau die Werte, die gleich in die DB geschrieben wuerden.
+    """
+    assert e.mapping is not None and e.cfg is not None
+
+    click.echo()
+    click.secho(
+        f"  Vorschau: {e.zeilen_gesamt} Datensaetze -> "
+        f"Tabelle '{e.cfg.zielsystem.tabelle}' "
+        f"(pk_konflikt: {e.cfg.zielsystem.pk_konflikt})",
+        fg="cyan",
+    )
+    click.echo()
+
+    zielfelder = e.mapping.zielfelder
+    saetze = e.mapping.saetze[:max_zeilen]
+
+    # Spaltenbreiten dynamisch bestimmen fuer sauberen Tabellendruck
+    breiten = {f: max(len(f), max((len(str(s.get(f))) for s in saetze), default=0))
+               for f in zielfelder}
+
+    header = " | ".join(f.ljust(breiten[f]) for f in zielfelder)
+    trenner = "-+-".join("-" * breiten[f] for f in zielfelder)
+    click.echo("  " + header)
+    click.echo("  " + trenner)
+    for satz in saetze:
+        zeile = " | ".join(str(satz.get(f) if satz.get(f) is not None else "")
+                          .ljust(breiten[f]) for f in zielfelder)
+        click.echo("  " + zeile)
+
+    wenigere = len(e.mapping.saetze) - len(saetze)
+    if wenigere > 0:
+        click.echo(f"  ... und {wenigere} weitere Datensaetze")
 
 
 def _zeige_ergebnis(e: VerarbeitungsErgebnis) -> None:
     if e.status is Status.GELADEN:
-        click.secho(
+        text = (
             f"  OK — {e.zeilen_geladen} Datensaetze geladen "
-            f"(von {e.zeilen_gesamt} validierten Zeilen).",
-            fg="green",
+            f"(von {e.zeilen_gesamt} validierten Zeilen)"
         )
+        if e.zeilen_uebersprungen:
+            text += f", {e.zeilen_uebersprungen} uebersprungen (PK existierte)"
+        click.secho(text + ".", fg="green")
         return
 
     click.secho(f"  ABGELEHNT — {e.fehler_grund}:", fg="red")

@@ -38,6 +38,17 @@ from vierol_import.mapping.mapper import MappingErgebnis
 
 logger = logging.getLogger(__name__)
 
+
+class PKKonfliktFehler(Exception):
+    """Wird geworfen, wenn `pk_konflikt=reject` und mind. ein Konflikt
+    auftrat. Loest den Transaktions-Rollback aus."""
+
+    def __init__(self, anzahl: int) -> None:
+        super().__init__(
+            f"{anzahl} Datensatz/-saetze existieren bereits (pk_konflikt=reject)"
+        )
+        self.anzahl = anzahl
+
 # Python-Typ -> SQLite-Spaltentyp. SQLite ist dynamisch typisiert,
 # aber wir setzen die Typ-Affinitaeten trotzdem korrekt, damit
 # spaetere Abfragen sich verhalten wie erwartet.
@@ -56,7 +67,8 @@ _SQL_TYP = {
 class LadeErgebnis:
     tabelle: str
     zeilen_geladen: int
-    zeilen_uebersprungen: int = 0
+    zeilen_uebersprungen: int = 0     # bei pk_konflikt=skip
+    konflikte_erkannt: int = 0        # bei pk_konflikt=reject: Zaehler VOR Rollback
 
 
 def lade_sqlite(
@@ -67,6 +79,12 @@ def lade_sqlite(
     """Ein MappingErgebnis in eine SQLite-Datenbank schreiben.
 
     Legt die Tabelle bei Bedarf an, faehrt alles in einer Transaktion.
+    Verhalten bei PK-Konflikt richtet sich nach `cfg.zielsystem.pk_konflikt`:
+
+      - skip:   bestehende Datensaetze werden nicht ueberschrieben
+      - update: bestehende Datensaetze werden ueberschrieben
+      - reject: erster Konflikt loest Rollback der ganzen Datei aus
+                (PKKonfliktFehler)
     """
     if not ergebnis.saetze:
         logger.warning("Nichts zu laden — 0 Datensaetze.")
@@ -77,7 +95,7 @@ def lade_sqlite(
     try:
         con.execute("PRAGMA foreign_keys = ON")
         _tabelle_anlegen(con, cfg, ergebnis)
-        anzahl = _saetze_schreiben(con, cfg, ergebnis)
+        geladen, uebersprungen, konflikte = _saetze_schreiben(con, cfg, ergebnis)
         con.commit()
     except Exception:
         con.rollback()
@@ -87,12 +105,19 @@ def lade_sqlite(
         con.close()
 
     logger.info(
-        "Load: %d Datensaetze in Tabelle '%s' (DB %s)",
-        anzahl,
+        "Load: %d geladen, %d uebersprungen (Modus %s) -> Tabelle '%s' in %s",
+        geladen,
+        uebersprungen,
+        cfg.zielsystem.pk_konflikt,
         cfg.zielsystem.tabelle,
         db_pfad,
     )
-    return LadeErgebnis(tabelle=cfg.zielsystem.tabelle, zeilen_geladen=anzahl)
+    return LadeErgebnis(
+        tabelle=cfg.zielsystem.tabelle,
+        zeilen_geladen=geladen,
+        zeilen_uebersprungen=uebersprungen,
+        konflikte_erkannt=konflikte,
+    )
 
 
 def _tabelle_anlegen(
@@ -140,31 +165,73 @@ def _erste_typisierte_zeile(ergebnis: MappingErgebnis) -> dict[str, Any]:
 
 def _saetze_schreiben(
     con: sqlite3.Connection, cfg: QuellenConfig, ergebnis: MappingErgebnis
-) -> int:
-    """Alle Datensaetze per executemany schreiben (Upsert wenn moeglich)."""
+) -> tuple[int, int, int]:
+    """Alle Datensaetze schreiben, PK-Konflikte gemaess Config behandeln.
+
+    Rueckgabe: (geladen, uebersprungen, konflikte_gesamt).
+    """
     felder = ergebnis.zielfelder
     spalten_liste = ", ".join(f'"{f}"' for f in felder)
     platzhalter = ", ".join("?" for _ in felder)
     tabelle = cfg.zielsystem.tabelle
+    modus = cfg.zielsystem.pk_konflikt
+    has_pk = bool(cfg.zielsystem.upsert_key)
 
-    sql = f'INSERT INTO "{tabelle}" ({spalten_liste}) VALUES ({platzhalter})'
+    base_sql = f'INSERT INTO "{tabelle}" ({spalten_liste}) VALUES ({platzhalter})'
 
-    if cfg.zielsystem.upsert_key:
-        upsert_cols = ", ".join(f'"{k}"' for k in cfg.zielsystem.upsert_key)
-        # Nicht-Key-Felder aktualisieren
+    if not has_pk:
+        # Ohne PK gibt es keine Konflikte -> reiner Insert
+        rows = [tuple(_zu_sqlite_wert(s.get(f)) for f in felder) for s in ergebnis.saetze]
+        con.executemany(base_sql, rows)
+        return len(rows), 0, 0
+
+    upsert_cols = ", ".join(f'"{k}"' for k in cfg.zielsystem.upsert_key)
+
+    if modus == "skip":
+        sql = base_sql + f" ON CONFLICT ({upsert_cols}) DO NOTHING"
+    elif modus == "update":
         update_felder = [f for f in felder if f not in cfg.zielsystem.upsert_key]
-        update_clause = ", ".join(
-            f'"{f}" = excluded."{f}"' for f in update_felder
-        )
-        sql += f" ON CONFLICT ({upsert_cols}) DO UPDATE SET {update_clause}"
+        set_clause = ", ".join(f'"{f}" = excluded."{f}"' for f in update_felder)
+        sql = base_sql + f" ON CONFLICT ({upsert_cols}) DO UPDATE SET {set_clause}"
+    else:  # reject
+        # Fuer Konflikt-Zaehlung: Vorher pruefen, welche PKs schon existieren
+        konflikte = _konflikte_zaehlen(con, cfg, ergebnis)
+        if konflikte > 0:
+            raise PKKonfliktFehler(konflikte)
+        sql = base_sql
 
-    # sqlite3 kann datetime.date/datetime nicht direkt — als ISO-String schreiben
-    rows = [
-        tuple(_zu_sqlite_wert(satz.get(f)) for f in felder)
-        for satz in ergebnis.saetze
-    ]
-    con.executemany(sql, rows)
-    return len(rows)
+    rows = [tuple(_zu_sqlite_wert(s.get(f)) for f in felder) for s in ergebnis.saetze]
+
+    # Bei skip: Anzahl der uebersprungenen Zeilen ist Gesamt - geaenderte Zeilen
+    # SQLite's `changes()` liefert die zuletzt geaenderte Anzahl. Wir zaehlen
+    # daher Zeile fuer Zeile (executemany waere effizienter, verliert aber
+    # den Skip-Zaehler).
+    geladen = 0
+    for row in rows:
+        cur = con.execute(sql, row)
+        if cur.rowcount > 0:
+            geladen += 1
+    uebersprungen = len(rows) - geladen
+    return geladen, uebersprungen, 0
+
+
+def _konflikte_zaehlen(
+    con: sqlite3.Connection, cfg: QuellenConfig, ergebnis: MappingErgebnis
+) -> int:
+    """Zaehlt, wie viele Datensaetze bereits per PK in der Tabelle existieren.
+
+    Nur genutzt bei `pk_konflikt=reject`, um vor dem Insert zu entscheiden."""
+    tabelle = cfg.zielsystem.tabelle
+    keys = cfg.zielsystem.upsert_key
+    where = " AND ".join(f'"{k}" = ?' for k in keys)
+    sql = f'SELECT COUNT(*) FROM "{tabelle}" WHERE {where}'
+
+    konflikte = 0
+    for satz in ergebnis.saetze:
+        row = tuple(_zu_sqlite_wert(satz.get(k)) for k in keys)
+        if con.execute(sql, row).fetchone()[0] > 0:
+            konflikte += 1
+    return konflikte
 
 
 def _zu_sqlite_wert(v: Any) -> Any:

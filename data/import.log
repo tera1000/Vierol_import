@@ -36,3 +36,31 @@ CREATE TABLE IF NOT EXISTS "us_oe_bruttopreise" (
 )
 2026-07-17 21:16:46,612 INFO vierol_import.loading.loader: Load: 10 Datensaetze in Tabelle 'us_oe_bruttopreise' (DB data\vierol_import.sqlite)
 2026-07-17 21:16:46,613 INFO vierol_import.ingest.watcher: Archiviert: lieferung_a.csv -> data\archive\topmotive\lieferung_a__20260717_211646.csv
+2026-07-18 09:15:54,877 INFO vierol_import.classification.classifier: Klassifikation lieferung_2.csv: bester Kandidat 'topmotive' (Score 1.00)
+2026-07-18 09:15:54,886 INFO vierol_import.validation.validator: Validierung lieferung_2.csv: 10 Zeilen, 0 fehlerhaft -> OK
+2026-07-18 09:15:54,887 INFO vierol_import.mapping.mapper: Mapping lieferung_2.csv -> 10 Datensaetze, 9 Zielfelder
+2026-07-18 09:15:54,888 DEBUG vierol_import.loading.loader: DDL:
+CREATE TABLE IF NOT EXISTS "us_oe_bruttopreise" (
+  "hersteller" TEXT,
+  "oeno" TEXT,
+  "bezeichnung" TEXT,
+  "preis" REAL,
+  "datum_letztes_update" TEXT,
+  "ersatzflag" TEXT,
+  "ersatznummer" TEXT,
+  "laendercode" TEXT,
+  "jahrmonat" TEXT,
+  UNIQUE ("hersteller", "oeno")
+)
+2026-07-18 09:15:54,902 INFO vierol_import.loading.loader: Load: 10 geladen, 0 uebersprungen (Modus skip) -> Tabelle 'us_oe_bruttopreise' in data\vierol_import.sqlite
+2026-07-18 09:15:54,906 INFO vierol_import.ingest.watcher: Archiviert: lieferung_2.csv -> data\archive\topmotive\lieferung_2__20260718_091554.csv
+2026-07-18 09:43:54,706 INFO vierol_import.classification.classifier: Klassifikation lieferung.csv: bester Kandidat 'topmotive' (Score 1.00)
+2026-07-18 09:44:50,264 INFO vierol_import.validation.validator: Validierung lieferung.csv: 10 Zeilen, 0 fehlerhaft -> OK
+2026-07-18 09:44:50,264 INFO vierol_import.mapping.mapper: Mapping lieferung.csv -> 10 Datensaetze, 9 Zielfelder
+2026-07-18 09:52:21,295 INFO vierol_import.classification.classifier: Klassifikation lieferung.csv: bester Kandidat 'topmotive' (Score 1.00)
+2026-07-18 09:52:29,967 INFO vierol_import.classification.classifier: Klassifikation lieferung.csv: bester Kandidat 'topmotive' (Score 1.00)
+2026-07-18 09:53:07,621 INFO vierol_import.classification.classifier: Klassifikation lieferung.csv: bester Kandidat 'topmotive' (Score 1.00)
+2026-07-18 09:53:09,292 INFO vierol_import.validation.validator: Validierung lieferung.csv: 10 Zeilen, 0 fehlerhaft -> OK
+2026-07-18 09:53:09,293 INFO vierol_import.mapping.mapper: Mapping lieferung.csv -> 10 Datensaetze, 9 Zielfelder
+2026-07-18 09:53:15,188 INFO vierol_import.classification.classifier: Klassifikation lieferung.csv: bester Kandidat 'topmotive' (Score 1.00)
+2026-07-18 09:54:14,126 INFO vierol_import.classification.classifier: Klassifikation lieferung.csv: bester Kandidat 'topmotive' (Score 1.00)
