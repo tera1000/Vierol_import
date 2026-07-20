@@ -14,7 +14,7 @@ spalten:
   - position: 1
     name: oeno
     typ: string
-    muster: "^[A-Z0-9\\-\\./ ]+$"
+    muster: "^[A-Za-z0-9\\-\\./ ]+$"
   - position: 2
     name: bezeichnung
     typ: string
@@ -28,17 +28,17 @@ spalten:
   - position: 5
     name: ersatzflag
     typ: string
-    muster: "^[A-Z]$"
+    muster: "^[A-Za-z]$"
     pflicht: false
   - position: 6
     name: ersatznummer
     typ: string
-    muster: "^[A-Z0-9\\-\\./ ]+$"
+    muster: "^[A-Za-z0-9\\-\\./ ]+$"
     pflicht: false
   - position: 7
     name: laendercode
     typ: string
-    muster: "^[A-Z]$"
+    muster: "^[A-Za-z]$"
 
 klassifikation:
   stichprobe_zeilen: 20
