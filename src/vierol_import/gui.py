@@ -97,6 +97,8 @@ for key, default in [
     ("zip_dateien", None),         # Liste EntpackteDatei nach ZIP-Upload
     ("zip_verzeichnis", None),     # Temp-Ordner mit den entpackten Dateien
     ("zip_batch_status", None),    # dict mit Erfolgs/Fehler-Zaehlern
+    ("zip_wahl", None),            # dict {zip-pfad: gewaehlte quelle}
+    ("zip_pruefungen", None),      # dict {zip-pfad: VerarbeitungsErgebnis}
 ]:
     if key not in st.session_state:
         st.session_state[key] = default
@@ -118,6 +120,8 @@ def _session_reset() -> None:
     st.session_state.zip_dateien = None
     st.session_state.zip_verzeichnis = None
     st.session_state.zip_batch_status = None
+    st.session_state.zip_wahl = None
+    st.session_state.zip_pruefungen = None
 
 
 def _zip_verzeichnis_aufraeumen() -> None:
@@ -126,6 +130,93 @@ def _zip_verzeichnis_aufraeumen() -> None:
     zv = st.session_state.zip_verzeichnis
     if zv and zv.exists():
         shutil.rmtree(zv, ignore_errors=True)
+
+
+def _zeige_fehler_gruppiert(fehler_details: list[str]) -> None:
+    """Fehlermeldungen gruppieren, damit '150x ungueltiges Datum' nicht
+    als 150 einzelne Zeilen erscheint. Gruppiert nach Spalte + Grund."""
+    from collections import Counter
+    import re
+
+    # Struktur der Details:
+    #   "Zeile 47, Spalte 'oeno': '9.91E+40' — passt nicht zu Typ 'string' / Muster '...'"
+    # Wir extrahieren Spalte + Grund als Kategorie.
+    kategorien: Counter[str] = Counter()
+    beispiele: dict[str, str] = {}
+
+    for zeile in fehler_details:
+        # Spalten-Fehler
+        m = re.match(r"Zeile \d+, Spalte '([^']+)': '([^']*)' — (.+)", zeile)
+        if m:
+            spalte, wert, grund = m.groups()
+            kat = f"Spalte '{spalte}': {grund}"
+            kategorien[kat] += 1
+            beispiele.setdefault(kat, f"Beispiel: '{wert}'")
+            continue
+        # Zeilen-Fehler ohne Spalte (z. B. Spaltenanzahl)
+        m2 = re.match(r"Zeile \d+: (.+)", zeile)
+        if m2:
+            grund = m2.group(1)
+            kategorien[grund] += 1
+            continue
+        # Fallback: ganze Meldung als Kategorie
+        kategorien[zeile] += 1
+
+    st.caption(f"{len(kategorien)} unterschiedliche Fehlerkategorie(n):")
+    df = pd.DataFrame([
+        {"Anzahl": anz, "Kategorie": kat, "Beispiel": beispiele.get(kat, "")}
+        for kat, anz in kategorien.most_common()
+    ])
+    st.dataframe(df, hide_index=True, use_container_width=True)
+
+
+def _schreibe_batch(bereit: list, engine) -> None:
+    """Alle 'bereit'-Dateien nacheinander schreiben."""
+    stats = {"geladen": 0, "fehler": 0, "quarantaene_gesamt": 0}
+    pbar = st.progress(0.0, text="Schreibe...")
+
+    for i, (ed, erg) in enumerate(bereit, start=1):
+        pbar.progress(i / len(bereit),
+                      text=f"[{i}/{len(bereit)}] {ed.original_pfad}")
+        engine.schreibe(erg)
+
+        if erg.erfolg:
+            if erg.quarantaene_zeilen:
+                schreibe_quarantaene(
+                    ed.pfad, DEFAULT_REJECT, erg.quarantaene_zeilen
+                )
+                stats["quarantaene_gesamt"] += erg.zeilen_quarantaene
+            verschiebe_ins_archiv(ed.pfad, DEFAULT_ARCHIVE, erg.quelle)  # type: ignore[arg-type]
+            stats["geladen"] += 1
+            logger.info("GUI-ZIP: '%s' geladen (%d neu, %d Quarantaene)",
+                        ed.original_pfad, erg.zeilen_geladen, erg.zeilen_quarantaene)
+        else:
+            verschiebe_ins_reject(
+                ed.pfad, DEFAULT_REJECT, erg.fehler_grund, erg.fehler_details
+            )
+            stats["fehler"] += 1
+            logger.info("GUI-ZIP: '%s' beim Schreiben abgelehnt (%s)",
+                        ed.original_pfad, erg.fehler_grund)
+
+    pbar.empty()
+
+    if stats["fehler"] == 0:
+        st.success(
+            f"✅ Alle {stats['geladen']} Dateien geschrieben."
+            + (
+                f" ({stats['quarantaene_gesamt']} Zeilen in Quarantaene)"
+                if stats["quarantaene_gesamt"] else ""
+            )
+        )
+    else:
+        st.warning(
+            f"Fertig: {stats['geladen']} geschrieben, {stats['fehler']} "
+            "beim Schreiben abgelehnt."
+        )
+
+    # Session zuruecksetzen -- neuer Upload
+    st.session_state.zip_pruefungen = None
+    st.session_state.zip_wahl = None
 
 
 # --- Layout: Titel + Katalog ------------------------------------------------
@@ -296,108 +387,173 @@ if st.session_state.zip_dateien is not None:
 
     st.write(
         f"**{len(zd)}** Datei(en) im ZIP `{st.session_state.upload_name}` "
-        f"({sum(e.groesse for e in zd) / (1024 * 1024):.1f} MB gesamt):"
+        f"({sum(e.groesse for e in zd) / (1024 * 1024):.1f} MB gesamt)"
     )
-    df_zip = pd.DataFrame([
-        {
-            "Pfad im ZIP": e.original_pfad,
-            "Groesse (KB)": f"{e.groesse / 1024:.1f}",
-        }
-        for e in zd
-    ])
-    st.dataframe(df_zip, hide_index=True, use_container_width=True)
+
+    # Erkennung + Vor-Ergebnis fuer jede Datei ---------------------------
+    # Wird bei jedem Rerun neu berechnet — Streamlit-Renders sind guenstig
+    # und die Ergebnisse haengen davon ab, welche Quelle der User waehlt.
 
     st.caption(
-        "💡 Der Batch-Import verarbeitet alle Dateien nacheinander mit "
-        "automatischer Quellen-Erkennung (Schwellenwert der jeweiligen Config). "
-        "Dateien ohne sicheren Vorschlag werden abgelehnt. "
-        "Erfolge werden ins Archiv verschoben, Fehler ins Reject-Verzeichnis."
+        "💡 Fuer jede Datei kannst du die Quelle bestaetigen oder aendern. "
+        "'Pruefen' unten laeuft dann ueber alle ausgewaehlten Dateien; "
+        "geschrieben wird erst mit dem zweiten Button."
     )
 
-    col_batch, col_neu = st.columns([1, 1])
-    with col_batch:
-        batch_start = st.button(
-            "🚀 Alle Dateien aus dem ZIP verarbeiten",
+    # Fuer die Anzeige: Ranking pro Datei einmal ausfuehren
+    rankings: dict[str, list] = {}
+    for ed in zd:
+        r = klassifiziere(ed.pfad, engine.configs)
+        rankings[ed.original_pfad] = r.ergebnisse
+
+    # Dropdown-Werte: erste erlaubte Option ist ein "nicht importieren"-Sentinel
+    NICHT_IMPORTIEREN = "— nicht importieren —"
+    dropdown_optionen = [NICHT_IMPORTIEREN] + quellen
+
+    # Pro Datei den Vorschlag und die aktuelle User-Wahl speichern
+    if "zip_wahl" not in st.session_state or st.session_state.zip_wahl is None:
+        # Erst-Init: Vorschlag als Default
+        wahl_default = {}
+        for ed in zd:
+            r = rankings[ed.original_pfad]
+            kandidaten = [x for x in r if x.moeglich]
+            if kandidaten and kandidaten[0].score >= engine.configs[
+                kandidaten[0].quelle
+            ].klassifikation.schwellenwert:
+                wahl_default[ed.original_pfad] = kandidaten[0].quelle
+            else:
+                wahl_default[ed.original_pfad] = NICHT_IMPORTIEREN
+        st.session_state.zip_wahl = wahl_default
+
+    # Uebersichts-Tabelle mit Dropdown pro Zeile ---------------------------
+    st.subheader("Dateien im ZIP")
+    for ed in zd:
+        col_datei, col_dropdown = st.columns([3, 2])
+        with col_datei:
+            r = rankings[ed.original_pfad]
+            bester = next((x for x in r if x.moeglich), None)
+            if bester:
+                vorschlag = f"{bester.quelle} ({bester.score:.0%})"
+            else:
+                vorschlag = "(keine Quelle passt)"
+            st.markdown(f"📄 **{ed.original_pfad}**")
+            st.caption(f"Erkennungs-Vorschlag: {vorschlag}")
+
+        with col_dropdown:
+            current = st.session_state.zip_wahl.get(ed.original_pfad, NICHT_IMPORTIEREN)
+            idx = dropdown_optionen.index(current) if current in dropdown_optionen else 0
+            neue_wahl = st.selectbox(
+                f"Quelle fuer {ed.original_pfad}",
+                options=dropdown_optionen,
+                index=idx,
+                key=f"quelle_{ed.original_pfad}",
+                label_visibility="collapsed",
+            )
+            st.session_state.zip_wahl[ed.original_pfad] = neue_wahl
+
+    st.divider()
+
+    # Aktionen: Pruefen + Schreiben ---------------------------------------
+    col_pruef, col_reset = st.columns([1, 1])
+    with col_pruef:
+        pruefen_all = st.button(
+            "🔍 Ausgewaehlte pruefen (ohne Schreiben)",
             type="primary", use_container_width=True,
         )
-    with col_neu:
-        if st.button("🔄 Anderes hochladen", use_container_width=True):
+    with col_reset:
+        if st.button("🔄 Anderes ZIP hochladen", use_container_width=True):
+            st.session_state.zip_wahl = None
             _session_reset()
             st.rerun()
 
-    if batch_start:
-        logger.info(
-            "GUI-ZIP: Batch-Import gestartet, %d Datei(en) aus '%s'",
-            len(zd), st.session_state.upload_name,
-        )
-        stats = {"geladen": 0, "abgelehnt": 0, "quarantaene_gesamt": 0}
-        fortschritt = st.progress(0.0, text="Starte...")
-        ergebnisse_pro_datei = []
-
-        for i, ed in enumerate(zd, start=1):
-            fortschritt.progress(
-                i / len(zd),
-                text=f"[{i}/{len(zd)}] {ed.original_pfad}",
+    if pruefen_all:
+        pruef_ergebnisse = {}
+        pbar = st.progress(0.0, text="Pruefe...")
+        eligible = [
+            ed for ed in zd
+            if st.session_state.zip_wahl.get(ed.original_pfad) != NICHT_IMPORTIEREN
+        ]
+        for i, ed in enumerate(eligible, start=1):
+            pbar.progress(i / max(len(eligible), 1),
+                          text=f"[{i}/{len(eligible)}] {ed.original_pfad}")
+            quelle_gewahlt = st.session_state.zip_wahl[ed.original_pfad]
+            pruef_ergebnisse[ed.original_pfad] = engine.verarbeite_mit_quelle(
+                ed.pfad, quelle_gewahlt
             )
-            r = engine.verarbeite_auto_und_schreibe(ed.pfad)
+        pbar.empty()
+        st.session_state.zip_pruefungen = pruef_ergebnisse
 
-            if r.erfolg:
-                ziel = verschiebe_ins_archiv(ed.pfad, DEFAULT_ARCHIVE, r.quelle)  # type: ignore[arg-type]
-                stats["geladen"] += 1
-                if r.quarantaene_zeilen:
-                    schreibe_quarantaene(
-                        ed.pfad, DEFAULT_REJECT, r.quarantaene_zeilen
-                    )
-                    stats["quarantaene_gesamt"] += r.zeilen_quarantaene
-                ergebnisse_pro_datei.append({
-                    "Datei": ed.original_pfad,
-                    "Status": "✅ geladen",
-                    "Quelle": r.quelle,
-                    "geladen": r.zeilen_geladen,
-                    "quarantaene": r.zeilen_quarantaene or "-",
-                    "Detail": f"→ {ziel.name}",
-                })
-            else:
-                verschiebe_ins_reject(
-                    ed.pfad, DEFAULT_REJECT, r.fehler_grund, r.fehler_details
-                )
-                stats["abgelehnt"] += 1
-                ergebnisse_pro_datei.append({
-                    "Datei": ed.original_pfad,
-                    "Status": "❌ abgelehnt",
-                    "Quelle": r.quelle or "—",
-                    "geladen": 0,
-                    "quarantaene": "-",
-                    "Detail": r.fehler_grund,
-                })
+    # Wenn schon geprueft: Ergebnisse anzeigen -----------------------------
+    if st.session_state.get("zip_pruefungen"):
+        st.subheader("Pruef-Ergebnisse")
 
-        fortschritt.empty()
-        st.session_state.zip_batch_status = stats
+        bereit_zum_schreiben = []
+        for ed in zd:
+            erg = st.session_state.zip_pruefungen.get(ed.original_pfad)
+            if erg is None:
+                continue  # nicht importieren gewaehlt
 
-        if stats["abgelehnt"] == 0:
-            st.success(
-                f"✅ Alle {stats['geladen']} Dateien erfolgreich verarbeitet."
-                + (
-                    f" ({stats['quarantaene_gesamt']} Zeilen in Quarantaene)"
-                    if stats["quarantaene_gesamt"] else ""
-                )
-            )
-        else:
+            with st.container(border=True):
+                col_status, col_info = st.columns([1, 3])
+
+                if erg.bereit_zum_schreiben:
+                    with col_status:
+                        st.success("✅ bereit")
+                    with col_info:
+                        st.markdown(f"**{ed.original_pfad}** → `{erg.cfg.zielsystem.tabelle}`")
+                        st.caption(
+                            f"{len(erg.mapping.saetze)} Datensaetze"
+                            + (
+                                f" · {erg.zeilen_quarantaene} in Quarantaene (Fehler unten)"
+                                if erg.zeilen_quarantaene else ""
+                            )
+                        )
+                        bereit_zum_schreiben.append((ed, erg))
+
+                    # Vorschau optional aufklappen
+                    with st.expander("Vorschau"):
+                        st.dataframe(
+                            pd.DataFrame(
+                                erg.mapping.saetze[:20],
+                                columns=erg.mapping.zielfelder,
+                            ),
+                            hide_index=True, use_container_width=True,
+                        )
+                        if len(erg.mapping.saetze) > 20:
+                            st.caption(f"... und {len(erg.mapping.saetze) - 20} weitere")
+
+                    # Quarantaene-Fehler nach Kategorie gruppiert
+                    if erg.zeilen_quarantaene:
+                        with st.expander(
+                            f"⚠️ Fehlerhafte Zeilen "
+                            f"({erg.zeilen_quarantaene} Zeilen, gruppiert)"
+                        ):
+                            _zeige_fehler_gruppiert(erg.fehler_details)
+                else:
+                    with col_status:
+                        st.error("❌ abgelehnt")
+                    with col_info:
+                        st.markdown(f"**{ed.original_pfad}**")
+                        st.caption(erg.fehler_grund)
+
+                    with st.expander(
+                        f"Fehlerdetails ({len(erg.fehler_details)} Eintraege, gruppiert)"
+                    ):
+                        _zeige_fehler_gruppiert(erg.fehler_details)
+
+        # Schreiben-Button nur wenn ueberhaupt was bereit ist -----------
+        if bereit_zum_schreiben:
+            st.divider()
             st.warning(
-                f"Verarbeitung fertig: {stats['geladen']} geladen, "
-                f"{stats['abgelehnt']} abgelehnt."
+                f"⚠️ Beim Schreiben werden **{len(bereit_zum_schreiben)}** Datei(en) "
+                "in die Zieltabellen eingefuegt und ins Archiv verschoben. "
+                "Quarantaene-Zeilen kommen zusaetzlich in den Reject-Ordner."
             )
-
-        st.subheader("Ergebnisse pro Datei")
-        st.dataframe(
-            pd.DataFrame(ergebnisse_pro_datei),
-            hide_index=True, use_container_width=True,
-        )
-
-        logger.info(
-            "GUI-ZIP: Batch fertig — %d geladen, %d abgelehnt, %d in Quarantaene",
-            stats["geladen"], stats["abgelehnt"], stats["quarantaene_gesamt"],
-        )
+            if st.button(
+                "✅ Alle bereiten Dateien schreiben",
+                type="primary", use_container_width=True,
+            ):
+                _schreibe_batch(bereit_zum_schreiben, engine)
 
     st.stop()
 
