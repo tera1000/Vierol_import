@@ -1392,3 +1392,634 @@ CREATE TABLE IF NOT EXISTS "gebrauchtwagen" (
 2026-07-20 23:13:56,853 INFO vierol_import.gui: GUI: 'automobile_dataset.csv' geladen (3823 neu, 1677 uebersprungen, 0 in Quarantaene)
 2026-07-20 23:13:56,853 INFO vierol_import.gui: GUI: 'automobile_dataset.csv' geladen (3823 neu, 1677 uebersprungen, 0 in Quarantaene)
 2026-07-20 23:13:56,853 INFO vierol_import.gui: GUI: 'automobile_dataset.csv' geladen (3823 neu, 1677 uebersprungen, 0 in Quarantaene)
+2026-07-20 23:25:47,472 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:25:47,472 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:25:47,472 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:25:47,472 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:25:47,472 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:25:47,472 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:25:47,472 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:25:47,472 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:33:50,178 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:33:50,178 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:33:50,178 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:33:50,178 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:33:50,178 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:33:50,178 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:33:50,178 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:33:50,178 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:33:50,178 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:36:47,692 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:36:47,692 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:36:47,692 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:36:47,692 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:36:47,692 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:36:47,692 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:36:47,692 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:36:47,692 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:36:47,692 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:36:47,692 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:36:52,780 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:36:52,780 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:36:52,780 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:36:52,780 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:36:52,780 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:36:52,780 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:36:52,780 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:36:52,780 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:36:52,780 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:36:52,780 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:36:52,780 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:36:52,916 INFO vierol_import.validation.validator: Validierung vierol_e216fe1c_automobile_dataset.csv: 5501 Zeilen, 5501 fehlerhaft -> ABGELEHNT
+2026-07-20 23:36:52,916 INFO vierol_import.validation.validator: Validierung vierol_e216fe1c_automobile_dataset.csv: 5501 Zeilen, 5501 fehlerhaft -> ABGELEHNT
+2026-07-20 23:36:52,916 INFO vierol_import.validation.validator: Validierung vierol_e216fe1c_automobile_dataset.csv: 5501 Zeilen, 5501 fehlerhaft -> ABGELEHNT
+2026-07-20 23:36:52,916 INFO vierol_import.validation.validator: Validierung vierol_e216fe1c_automobile_dataset.csv: 5501 Zeilen, 5501 fehlerhaft -> ABGELEHNT
+2026-07-20 23:36:52,916 INFO vierol_import.validation.validator: Validierung vierol_e216fe1c_automobile_dataset.csv: 5501 Zeilen, 5501 fehlerhaft -> ABGELEHNT
+2026-07-20 23:36:52,916 INFO vierol_import.validation.validator: Validierung vierol_e216fe1c_automobile_dataset.csv: 5501 Zeilen, 5501 fehlerhaft -> ABGELEHNT
+2026-07-20 23:36:52,916 INFO vierol_import.validation.validator: Validierung vierol_e216fe1c_automobile_dataset.csv: 5501 Zeilen, 5501 fehlerhaft -> ABGELEHNT
+2026-07-20 23:36:52,916 INFO vierol_import.validation.validator: Validierung vierol_e216fe1c_automobile_dataset.csv: 5501 Zeilen, 5501 fehlerhaft -> ABGELEHNT
+2026-07-20 23:36:52,916 INFO vierol_import.validation.validator: Validierung vierol_e216fe1c_automobile_dataset.csv: 5501 Zeilen, 5501 fehlerhaft -> ABGELEHNT
+2026-07-20 23:36:52,916 INFO vierol_import.validation.validator: Validierung vierol_e216fe1c_automobile_dataset.csv: 5501 Zeilen, 5501 fehlerhaft -> ABGELEHNT
+2026-07-20 23:36:52,916 INFO vierol_import.validation.validator: Validierung vierol_e216fe1c_automobile_dataset.csv: 5501 Zeilen, 5501 fehlerhaft -> ABGELEHNT
+2026-07-20 23:37:07,317 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:37:07,317 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:37:07,317 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:37:07,317 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:37:07,317 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:37:07,317 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:37:07,317 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:37:07,317 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:37:07,317 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:37:07,317 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:37:07,317 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:37:07,317 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:37:09,384 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:37:09,384 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:37:09,384 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:37:09,384 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:37:09,384 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:37:09,384 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:37:09,384 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:37:09,384 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:37:09,384 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:37:09,384 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:37:09,384 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:37:09,384 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:37:09,384 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:37:09,683 INFO vierol_import.validation.validator: Validierung vierol_e216fe1c_automobile_dataset.csv: 5500 Zeilen, 0 fehlerhaft -> OK
+2026-07-20 23:37:09,683 INFO vierol_import.validation.validator: Validierung vierol_e216fe1c_automobile_dataset.csv: 5500 Zeilen, 0 fehlerhaft -> OK
+2026-07-20 23:37:09,683 INFO vierol_import.validation.validator: Validierung vierol_e216fe1c_automobile_dataset.csv: 5500 Zeilen, 0 fehlerhaft -> OK
+2026-07-20 23:37:09,683 INFO vierol_import.validation.validator: Validierung vierol_e216fe1c_automobile_dataset.csv: 5500 Zeilen, 0 fehlerhaft -> OK
+2026-07-20 23:37:09,683 INFO vierol_import.validation.validator: Validierung vierol_e216fe1c_automobile_dataset.csv: 5500 Zeilen, 0 fehlerhaft -> OK
+2026-07-20 23:37:09,683 INFO vierol_import.validation.validator: Validierung vierol_e216fe1c_automobile_dataset.csv: 5500 Zeilen, 0 fehlerhaft -> OK
+2026-07-20 23:37:09,683 INFO vierol_import.validation.validator: Validierung vierol_e216fe1c_automobile_dataset.csv: 5500 Zeilen, 0 fehlerhaft -> OK
+2026-07-20 23:37:09,683 INFO vierol_import.validation.validator: Validierung vierol_e216fe1c_automobile_dataset.csv: 5500 Zeilen, 0 fehlerhaft -> OK
+2026-07-20 23:37:09,683 INFO vierol_import.validation.validator: Validierung vierol_e216fe1c_automobile_dataset.csv: 5500 Zeilen, 0 fehlerhaft -> OK
+2026-07-20 23:37:09,683 INFO vierol_import.validation.validator: Validierung vierol_e216fe1c_automobile_dataset.csv: 5500 Zeilen, 0 fehlerhaft -> OK
+2026-07-20 23:37:09,683 INFO vierol_import.validation.validator: Validierung vierol_e216fe1c_automobile_dataset.csv: 5500 Zeilen, 0 fehlerhaft -> OK
+2026-07-20 23:37:09,683 INFO vierol_import.validation.validator: Validierung vierol_e216fe1c_automobile_dataset.csv: 5500 Zeilen, 0 fehlerhaft -> OK
+2026-07-20 23:37:09,683 INFO vierol_import.validation.validator: Validierung vierol_e216fe1c_automobile_dataset.csv: 5500 Zeilen, 0 fehlerhaft -> OK
+2026-07-20 23:37:09,780 INFO vierol_import.mapping.mapper: Mapping vierol_e216fe1c_automobile_dataset.csv -> 5500 Datensaetze, 18 Zielfelder
+2026-07-20 23:37:09,780 INFO vierol_import.mapping.mapper: Mapping vierol_e216fe1c_automobile_dataset.csv -> 5500 Datensaetze, 18 Zielfelder
+2026-07-20 23:37:09,780 INFO vierol_import.mapping.mapper: Mapping vierol_e216fe1c_automobile_dataset.csv -> 5500 Datensaetze, 18 Zielfelder
+2026-07-20 23:37:09,780 INFO vierol_import.mapping.mapper: Mapping vierol_e216fe1c_automobile_dataset.csv -> 5500 Datensaetze, 18 Zielfelder
+2026-07-20 23:37:09,780 INFO vierol_import.mapping.mapper: Mapping vierol_e216fe1c_automobile_dataset.csv -> 5500 Datensaetze, 18 Zielfelder
+2026-07-20 23:37:09,780 INFO vierol_import.mapping.mapper: Mapping vierol_e216fe1c_automobile_dataset.csv -> 5500 Datensaetze, 18 Zielfelder
+2026-07-20 23:37:09,780 INFO vierol_import.mapping.mapper: Mapping vierol_e216fe1c_automobile_dataset.csv -> 5500 Datensaetze, 18 Zielfelder
+2026-07-20 23:37:09,780 INFO vierol_import.mapping.mapper: Mapping vierol_e216fe1c_automobile_dataset.csv -> 5500 Datensaetze, 18 Zielfelder
+2026-07-20 23:37:09,780 INFO vierol_import.mapping.mapper: Mapping vierol_e216fe1c_automobile_dataset.csv -> 5500 Datensaetze, 18 Zielfelder
+2026-07-20 23:37:09,780 INFO vierol_import.mapping.mapper: Mapping vierol_e216fe1c_automobile_dataset.csv -> 5500 Datensaetze, 18 Zielfelder
+2026-07-20 23:37:09,780 INFO vierol_import.mapping.mapper: Mapping vierol_e216fe1c_automobile_dataset.csv -> 5500 Datensaetze, 18 Zielfelder
+2026-07-20 23:37:09,780 INFO vierol_import.mapping.mapper: Mapping vierol_e216fe1c_automobile_dataset.csv -> 5500 Datensaetze, 18 Zielfelder
+2026-07-20 23:37:09,780 INFO vierol_import.mapping.mapper: Mapping vierol_e216fe1c_automobile_dataset.csv -> 5500 Datensaetze, 18 Zielfelder
+2026-07-20 23:37:15,584 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:37:15,584 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:37:15,584 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:37:15,584 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:37:15,584 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:37:15,584 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:37:15,584 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:37:15,584 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:37:15,584 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:37:15,584 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:37:15,584 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:37:15,584 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:37:15,584 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:37:15,584 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:37:15,700 INFO vierol_import.gui: GUI: Schreibvorgang gestartet — Datei 'automobile_dataset.csv' (Hash e216fe1cec16...), Quelle 'fahrzeugdaten'
+2026-07-20 23:37:15,700 INFO vierol_import.gui: GUI: Schreibvorgang gestartet — Datei 'automobile_dataset.csv' (Hash e216fe1cec16...), Quelle 'fahrzeugdaten'
+2026-07-20 23:37:15,700 INFO vierol_import.gui: GUI: Schreibvorgang gestartet — Datei 'automobile_dataset.csv' (Hash e216fe1cec16...), Quelle 'fahrzeugdaten'
+2026-07-20 23:37:15,700 INFO vierol_import.gui: GUI: Schreibvorgang gestartet — Datei 'automobile_dataset.csv' (Hash e216fe1cec16...), Quelle 'fahrzeugdaten'
+2026-07-20 23:37:15,700 INFO vierol_import.gui: GUI: Schreibvorgang gestartet — Datei 'automobile_dataset.csv' (Hash e216fe1cec16...), Quelle 'fahrzeugdaten'
+2026-07-20 23:37:15,700 INFO vierol_import.gui: GUI: Schreibvorgang gestartet — Datei 'automobile_dataset.csv' (Hash e216fe1cec16...), Quelle 'fahrzeugdaten'
+2026-07-20 23:37:15,700 INFO vierol_import.gui: GUI: Schreibvorgang gestartet — Datei 'automobile_dataset.csv' (Hash e216fe1cec16...), Quelle 'fahrzeugdaten'
+2026-07-20 23:37:15,700 INFO vierol_import.gui: GUI: Schreibvorgang gestartet — Datei 'automobile_dataset.csv' (Hash e216fe1cec16...), Quelle 'fahrzeugdaten'
+2026-07-20 23:37:15,700 INFO vierol_import.gui: GUI: Schreibvorgang gestartet — Datei 'automobile_dataset.csv' (Hash e216fe1cec16...), Quelle 'fahrzeugdaten'
+2026-07-20 23:37:15,700 INFO vierol_import.gui: GUI: Schreibvorgang gestartet — Datei 'automobile_dataset.csv' (Hash e216fe1cec16...), Quelle 'fahrzeugdaten'
+2026-07-20 23:37:15,700 INFO vierol_import.gui: GUI: Schreibvorgang gestartet — Datei 'automobile_dataset.csv' (Hash e216fe1cec16...), Quelle 'fahrzeugdaten'
+2026-07-20 23:37:15,700 INFO vierol_import.gui: GUI: Schreibvorgang gestartet — Datei 'automobile_dataset.csv' (Hash e216fe1cec16...), Quelle 'fahrzeugdaten'
+2026-07-20 23:37:15,700 INFO vierol_import.gui: GUI: Schreibvorgang gestartet — Datei 'automobile_dataset.csv' (Hash e216fe1cec16...), Quelle 'fahrzeugdaten'
+2026-07-20 23:37:15,700 INFO vierol_import.gui: GUI: Schreibvorgang gestartet — Datei 'automobile_dataset.csv' (Hash e216fe1cec16...), Quelle 'fahrzeugdaten'
+2026-07-20 23:37:15,700 DEBUG vierol_import.loading.loader: DDL:
+CREATE TABLE IF NOT EXISTS "gebrauchtwagen" (
+  "make" TEXT,
+  "model" TEXT,
+  "year" INTEGER,
+  "fuel_type" TEXT,
+  "transmission" TEXT,
+  "engine_size" REAL,
+  "mileage" INTEGER,
+  "horsepower" REAL,
+  "torque" REAL,
+  "owners" INTEGER,
+  "accident_history" REAL,
+  "service_history" TEXT,
+  "color" TEXT,
+  "body_type" TEXT,
+  "drivetrain" TEXT,
+  "fuel_efficiency" REAL,
+  "location" TEXT,
+  "selling_price" INTEGER,
+  UNIQUE ("make", "model", "year", "mileage")
+)
+2026-07-20 23:37:15,700 DEBUG vierol_import.loading.loader: DDL:
+CREATE TABLE IF NOT EXISTS "gebrauchtwagen" (
+  "make" TEXT,
+  "model" TEXT,
+  "year" INTEGER,
+  "fuel_type" TEXT,
+  "transmission" TEXT,
+  "engine_size" REAL,
+  "mileage" INTEGER,
+  "horsepower" REAL,
+  "torque" REAL,
+  "owners" INTEGER,
+  "accident_history" REAL,
+  "service_history" TEXT,
+  "color" TEXT,
+  "body_type" TEXT,
+  "drivetrain" TEXT,
+  "fuel_efficiency" REAL,
+  "location" TEXT,
+  "selling_price" INTEGER,
+  UNIQUE ("make", "model", "year", "mileage")
+)
+2026-07-20 23:37:15,700 DEBUG vierol_import.loading.loader: DDL:
+CREATE TABLE IF NOT EXISTS "gebrauchtwagen" (
+  "make" TEXT,
+  "model" TEXT,
+  "year" INTEGER,
+  "fuel_type" TEXT,
+  "transmission" TEXT,
+  "engine_size" REAL,
+  "mileage" INTEGER,
+  "horsepower" REAL,
+  "torque" REAL,
+  "owners" INTEGER,
+  "accident_history" REAL,
+  "service_history" TEXT,
+  "color" TEXT,
+  "body_type" TEXT,
+  "drivetrain" TEXT,
+  "fuel_efficiency" REAL,
+  "location" TEXT,
+  "selling_price" INTEGER,
+  UNIQUE ("make", "model", "year", "mileage")
+)
+2026-07-20 23:37:15,700 DEBUG vierol_import.loading.loader: DDL:
+CREATE TABLE IF NOT EXISTS "gebrauchtwagen" (
+  "make" TEXT,
+  "model" TEXT,
+  "year" INTEGER,
+  "fuel_type" TEXT,
+  "transmission" TEXT,
+  "engine_size" REAL,
+  "mileage" INTEGER,
+  "horsepower" REAL,
+  "torque" REAL,
+  "owners" INTEGER,
+  "accident_history" REAL,
+  "service_history" TEXT,
+  "color" TEXT,
+  "body_type" TEXT,
+  "drivetrain" TEXT,
+  "fuel_efficiency" REAL,
+  "location" TEXT,
+  "selling_price" INTEGER,
+  UNIQUE ("make", "model", "year", "mileage")
+)
+2026-07-20 23:37:15,700 DEBUG vierol_import.loading.loader: DDL:
+CREATE TABLE IF NOT EXISTS "gebrauchtwagen" (
+  "make" TEXT,
+  "model" TEXT,
+  "year" INTEGER,
+  "fuel_type" TEXT,
+  "transmission" TEXT,
+  "engine_size" REAL,
+  "mileage" INTEGER,
+  "horsepower" REAL,
+  "torque" REAL,
+  "owners" INTEGER,
+  "accident_history" REAL,
+  "service_history" TEXT,
+  "color" TEXT,
+  "body_type" TEXT,
+  "drivetrain" TEXT,
+  "fuel_efficiency" REAL,
+  "location" TEXT,
+  "selling_price" INTEGER,
+  UNIQUE ("make", "model", "year", "mileage")
+)
+2026-07-20 23:37:15,700 DEBUG vierol_import.loading.loader: DDL:
+CREATE TABLE IF NOT EXISTS "gebrauchtwagen" (
+  "make" TEXT,
+  "model" TEXT,
+  "year" INTEGER,
+  "fuel_type" TEXT,
+  "transmission" TEXT,
+  "engine_size" REAL,
+  "mileage" INTEGER,
+  "horsepower" REAL,
+  "torque" REAL,
+  "owners" INTEGER,
+  "accident_history" REAL,
+  "service_history" TEXT,
+  "color" TEXT,
+  "body_type" TEXT,
+  "drivetrain" TEXT,
+  "fuel_efficiency" REAL,
+  "location" TEXT,
+  "selling_price" INTEGER,
+  UNIQUE ("make", "model", "year", "mileage")
+)
+2026-07-20 23:37:15,700 DEBUG vierol_import.loading.loader: DDL:
+CREATE TABLE IF NOT EXISTS "gebrauchtwagen" (
+  "make" TEXT,
+  "model" TEXT,
+  "year" INTEGER,
+  "fuel_type" TEXT,
+  "transmission" TEXT,
+  "engine_size" REAL,
+  "mileage" INTEGER,
+  "horsepower" REAL,
+  "torque" REAL,
+  "owners" INTEGER,
+  "accident_history" REAL,
+  "service_history" TEXT,
+  "color" TEXT,
+  "body_type" TEXT,
+  "drivetrain" TEXT,
+  "fuel_efficiency" REAL,
+  "location" TEXT,
+  "selling_price" INTEGER,
+  UNIQUE ("make", "model", "year", "mileage")
+)
+2026-07-20 23:37:15,700 DEBUG vierol_import.loading.loader: DDL:
+CREATE TABLE IF NOT EXISTS "gebrauchtwagen" (
+  "make" TEXT,
+  "model" TEXT,
+  "year" INTEGER,
+  "fuel_type" TEXT,
+  "transmission" TEXT,
+  "engine_size" REAL,
+  "mileage" INTEGER,
+  "horsepower" REAL,
+  "torque" REAL,
+  "owners" INTEGER,
+  "accident_history" REAL,
+  "service_history" TEXT,
+  "color" TEXT,
+  "body_type" TEXT,
+  "drivetrain" TEXT,
+  "fuel_efficiency" REAL,
+  "location" TEXT,
+  "selling_price" INTEGER,
+  UNIQUE ("make", "model", "year", "mileage")
+)
+2026-07-20 23:37:15,700 DEBUG vierol_import.loading.loader: DDL:
+CREATE TABLE IF NOT EXISTS "gebrauchtwagen" (
+  "make" TEXT,
+  "model" TEXT,
+  "year" INTEGER,
+  "fuel_type" TEXT,
+  "transmission" TEXT,
+  "engine_size" REAL,
+  "mileage" INTEGER,
+  "horsepower" REAL,
+  "torque" REAL,
+  "owners" INTEGER,
+  "accident_history" REAL,
+  "service_history" TEXT,
+  "color" TEXT,
+  "body_type" TEXT,
+  "drivetrain" TEXT,
+  "fuel_efficiency" REAL,
+  "location" TEXT,
+  "selling_price" INTEGER,
+  UNIQUE ("make", "model", "year", "mileage")
+)
+2026-07-20 23:37:15,700 DEBUG vierol_import.loading.loader: DDL:
+CREATE TABLE IF NOT EXISTS "gebrauchtwagen" (
+  "make" TEXT,
+  "model" TEXT,
+  "year" INTEGER,
+  "fuel_type" TEXT,
+  "transmission" TEXT,
+  "engine_size" REAL,
+  "mileage" INTEGER,
+  "horsepower" REAL,
+  "torque" REAL,
+  "owners" INTEGER,
+  "accident_history" REAL,
+  "service_history" TEXT,
+  "color" TEXT,
+  "body_type" TEXT,
+  "drivetrain" TEXT,
+  "fuel_efficiency" REAL,
+  "location" TEXT,
+  "selling_price" INTEGER,
+  UNIQUE ("make", "model", "year", "mileage")
+)
+2026-07-20 23:37:15,700 DEBUG vierol_import.loading.loader: DDL:
+CREATE TABLE IF NOT EXISTS "gebrauchtwagen" (
+  "make" TEXT,
+  "model" TEXT,
+  "year" INTEGER,
+  "fuel_type" TEXT,
+  "transmission" TEXT,
+  "engine_size" REAL,
+  "mileage" INTEGER,
+  "horsepower" REAL,
+  "torque" REAL,
+  "owners" INTEGER,
+  "accident_history" REAL,
+  "service_history" TEXT,
+  "color" TEXT,
+  "body_type" TEXT,
+  "drivetrain" TEXT,
+  "fuel_efficiency" REAL,
+  "location" TEXT,
+  "selling_price" INTEGER,
+  UNIQUE ("make", "model", "year", "mileage")
+)
+2026-07-20 23:37:15,700 DEBUG vierol_import.loading.loader: DDL:
+CREATE TABLE IF NOT EXISTS "gebrauchtwagen" (
+  "make" TEXT,
+  "model" TEXT,
+  "year" INTEGER,
+  "fuel_type" TEXT,
+  "transmission" TEXT,
+  "engine_size" REAL,
+  "mileage" INTEGER,
+  "horsepower" REAL,
+  "torque" REAL,
+  "owners" INTEGER,
+  "accident_history" REAL,
+  "service_history" TEXT,
+  "color" TEXT,
+  "body_type" TEXT,
+  "drivetrain" TEXT,
+  "fuel_efficiency" REAL,
+  "location" TEXT,
+  "selling_price" INTEGER,
+  UNIQUE ("make", "model", "year", "mileage")
+)
+2026-07-20 23:37:15,700 DEBUG vierol_import.loading.loader: DDL:
+CREATE TABLE IF NOT EXISTS "gebrauchtwagen" (
+  "make" TEXT,
+  "model" TEXT,
+  "year" INTEGER,
+  "fuel_type" TEXT,
+  "transmission" TEXT,
+  "engine_size" REAL,
+  "mileage" INTEGER,
+  "horsepower" REAL,
+  "torque" REAL,
+  "owners" INTEGER,
+  "accident_history" REAL,
+  "service_history" TEXT,
+  "color" TEXT,
+  "body_type" TEXT,
+  "drivetrain" TEXT,
+  "fuel_efficiency" REAL,
+  "location" TEXT,
+  "selling_price" INTEGER,
+  UNIQUE ("make", "model", "year", "mileage")
+)
+2026-07-20 23:37:15,700 DEBUG vierol_import.loading.loader: DDL:
+CREATE TABLE IF NOT EXISTS "gebrauchtwagen" (
+  "make" TEXT,
+  "model" TEXT,
+  "year" INTEGER,
+  "fuel_type" TEXT,
+  "transmission" TEXT,
+  "engine_size" REAL,
+  "mileage" INTEGER,
+  "horsepower" REAL,
+  "torque" REAL,
+  "owners" INTEGER,
+  "accident_history" REAL,
+  "service_history" TEXT,
+  "color" TEXT,
+  "body_type" TEXT,
+  "drivetrain" TEXT,
+  "fuel_efficiency" REAL,
+  "location" TEXT,
+  "selling_price" INTEGER,
+  UNIQUE ("make", "model", "year", "mileage")
+)
+2026-07-20 23:37:15,804 INFO vierol_import.loading.loader: Load: 0 geladen, 5500 uebersprungen (Modus skip) -> Tabelle 'gebrauchtwagen' in data\vierol_import.sqlite
+2026-07-20 23:37:15,804 INFO vierol_import.loading.loader: Load: 0 geladen, 5500 uebersprungen (Modus skip) -> Tabelle 'gebrauchtwagen' in data\vierol_import.sqlite
+2026-07-20 23:37:15,804 INFO vierol_import.loading.loader: Load: 0 geladen, 5500 uebersprungen (Modus skip) -> Tabelle 'gebrauchtwagen' in data\vierol_import.sqlite
+2026-07-20 23:37:15,804 INFO vierol_import.loading.loader: Load: 0 geladen, 5500 uebersprungen (Modus skip) -> Tabelle 'gebrauchtwagen' in data\vierol_import.sqlite
+2026-07-20 23:37:15,804 INFO vierol_import.loading.loader: Load: 0 geladen, 5500 uebersprungen (Modus skip) -> Tabelle 'gebrauchtwagen' in data\vierol_import.sqlite
+2026-07-20 23:37:15,804 INFO vierol_import.loading.loader: Load: 0 geladen, 5500 uebersprungen (Modus skip) -> Tabelle 'gebrauchtwagen' in data\vierol_import.sqlite
+2026-07-20 23:37:15,804 INFO vierol_import.loading.loader: Load: 0 geladen, 5500 uebersprungen (Modus skip) -> Tabelle 'gebrauchtwagen' in data\vierol_import.sqlite
+2026-07-20 23:37:15,804 INFO vierol_import.loading.loader: Load: 0 geladen, 5500 uebersprungen (Modus skip) -> Tabelle 'gebrauchtwagen' in data\vierol_import.sqlite
+2026-07-20 23:37:15,804 INFO vierol_import.loading.loader: Load: 0 geladen, 5500 uebersprungen (Modus skip) -> Tabelle 'gebrauchtwagen' in data\vierol_import.sqlite
+2026-07-20 23:37:15,804 INFO vierol_import.loading.loader: Load: 0 geladen, 5500 uebersprungen (Modus skip) -> Tabelle 'gebrauchtwagen' in data\vierol_import.sqlite
+2026-07-20 23:37:15,804 INFO vierol_import.loading.loader: Load: 0 geladen, 5500 uebersprungen (Modus skip) -> Tabelle 'gebrauchtwagen' in data\vierol_import.sqlite
+2026-07-20 23:37:15,804 INFO vierol_import.loading.loader: Load: 0 geladen, 5500 uebersprungen (Modus skip) -> Tabelle 'gebrauchtwagen' in data\vierol_import.sqlite
+2026-07-20 23:37:15,804 INFO vierol_import.loading.loader: Load: 0 geladen, 5500 uebersprungen (Modus skip) -> Tabelle 'gebrauchtwagen' in data\vierol_import.sqlite
+2026-07-20 23:37:15,804 INFO vierol_import.loading.loader: Load: 0 geladen, 5500 uebersprungen (Modus skip) -> Tabelle 'gebrauchtwagen' in data\vierol_import.sqlite
+2026-07-20 23:37:15,804 INFO vierol_import.ingest.watcher: Archiviert: vierol_e216fe1c_automobile_dataset.csv -> data\archive\fahrzeugdaten\vierol_e216fe1c_automobile_dataset__20260720_233715.csv
+2026-07-20 23:37:15,804 INFO vierol_import.ingest.watcher: Archiviert: vierol_e216fe1c_automobile_dataset.csv -> data\archive\fahrzeugdaten\vierol_e216fe1c_automobile_dataset__20260720_233715.csv
+2026-07-20 23:37:15,804 INFO vierol_import.ingest.watcher: Archiviert: vierol_e216fe1c_automobile_dataset.csv -> data\archive\fahrzeugdaten\vierol_e216fe1c_automobile_dataset__20260720_233715.csv
+2026-07-20 23:37:15,804 INFO vierol_import.ingest.watcher: Archiviert: vierol_e216fe1c_automobile_dataset.csv -> data\archive\fahrzeugdaten\vierol_e216fe1c_automobile_dataset__20260720_233715.csv
+2026-07-20 23:37:15,804 INFO vierol_import.ingest.watcher: Archiviert: vierol_e216fe1c_automobile_dataset.csv -> data\archive\fahrzeugdaten\vierol_e216fe1c_automobile_dataset__20260720_233715.csv
+2026-07-20 23:37:15,804 INFO vierol_import.ingest.watcher: Archiviert: vierol_e216fe1c_automobile_dataset.csv -> data\archive\fahrzeugdaten\vierol_e216fe1c_automobile_dataset__20260720_233715.csv
+2026-07-20 23:37:15,804 INFO vierol_import.ingest.watcher: Archiviert: vierol_e216fe1c_automobile_dataset.csv -> data\archive\fahrzeugdaten\vierol_e216fe1c_automobile_dataset__20260720_233715.csv
+2026-07-20 23:37:15,804 INFO vierol_import.ingest.watcher: Archiviert: vierol_e216fe1c_automobile_dataset.csv -> data\archive\fahrzeugdaten\vierol_e216fe1c_automobile_dataset__20260720_233715.csv
+2026-07-20 23:37:15,804 INFO vierol_import.ingest.watcher: Archiviert: vierol_e216fe1c_automobile_dataset.csv -> data\archive\fahrzeugdaten\vierol_e216fe1c_automobile_dataset__20260720_233715.csv
+2026-07-20 23:37:15,804 INFO vierol_import.ingest.watcher: Archiviert: vierol_e216fe1c_automobile_dataset.csv -> data\archive\fahrzeugdaten\vierol_e216fe1c_automobile_dataset__20260720_233715.csv
+2026-07-20 23:37:15,804 INFO vierol_import.ingest.watcher: Archiviert: vierol_e216fe1c_automobile_dataset.csv -> data\archive\fahrzeugdaten\vierol_e216fe1c_automobile_dataset__20260720_233715.csv
+2026-07-20 23:37:15,804 INFO vierol_import.ingest.watcher: Archiviert: vierol_e216fe1c_automobile_dataset.csv -> data\archive\fahrzeugdaten\vierol_e216fe1c_automobile_dataset__20260720_233715.csv
+2026-07-20 23:37:15,804 INFO vierol_import.ingest.watcher: Archiviert: vierol_e216fe1c_automobile_dataset.csv -> data\archive\fahrzeugdaten\vierol_e216fe1c_automobile_dataset__20260720_233715.csv
+2026-07-20 23:37:15,804 INFO vierol_import.ingest.watcher: Archiviert: vierol_e216fe1c_automobile_dataset.csv -> data\archive\fahrzeugdaten\vierol_e216fe1c_automobile_dataset__20260720_233715.csv
+2026-07-20 23:37:15,804 INFO vierol_import.gui: GUI: 'automobile_dataset.csv' geladen (0 neu, 5500 uebersprungen, 0 in Quarantaene)
+2026-07-20 23:37:15,804 INFO vierol_import.gui: GUI: 'automobile_dataset.csv' geladen (0 neu, 5500 uebersprungen, 0 in Quarantaene)
+2026-07-20 23:37:15,804 INFO vierol_import.gui: GUI: 'automobile_dataset.csv' geladen (0 neu, 5500 uebersprungen, 0 in Quarantaene)
+2026-07-20 23:37:15,804 INFO vierol_import.gui: GUI: 'automobile_dataset.csv' geladen (0 neu, 5500 uebersprungen, 0 in Quarantaene)
+2026-07-20 23:37:15,804 INFO vierol_import.gui: GUI: 'automobile_dataset.csv' geladen (0 neu, 5500 uebersprungen, 0 in Quarantaene)
+2026-07-20 23:37:15,804 INFO vierol_import.gui: GUI: 'automobile_dataset.csv' geladen (0 neu, 5500 uebersprungen, 0 in Quarantaene)
+2026-07-20 23:37:15,804 INFO vierol_import.gui: GUI: 'automobile_dataset.csv' geladen (0 neu, 5500 uebersprungen, 0 in Quarantaene)
+2026-07-20 23:37:15,804 INFO vierol_import.gui: GUI: 'automobile_dataset.csv' geladen (0 neu, 5500 uebersprungen, 0 in Quarantaene)
+2026-07-20 23:37:15,804 INFO vierol_import.gui: GUI: 'automobile_dataset.csv' geladen (0 neu, 5500 uebersprungen, 0 in Quarantaene)
+2026-07-20 23:37:15,804 INFO vierol_import.gui: GUI: 'automobile_dataset.csv' geladen (0 neu, 5500 uebersprungen, 0 in Quarantaene)
+2026-07-20 23:37:15,804 INFO vierol_import.gui: GUI: 'automobile_dataset.csv' geladen (0 neu, 5500 uebersprungen, 0 in Quarantaene)
+2026-07-20 23:37:15,804 INFO vierol_import.gui: GUI: 'automobile_dataset.csv' geladen (0 neu, 5500 uebersprungen, 0 in Quarantaene)
+2026-07-20 23:37:15,804 INFO vierol_import.gui: GUI: 'automobile_dataset.csv' geladen (0 neu, 5500 uebersprungen, 0 in Quarantaene)
+2026-07-20 23:37:15,804 INFO vierol_import.gui: GUI: 'automobile_dataset.csv' geladen (0 neu, 5500 uebersprungen, 0 in Quarantaene)
+2026-07-20 23:40:50,342 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:40:50,342 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:40:50,342 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:40:50,342 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:40:50,342 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:40:50,342 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:40:50,342 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:40:50,342 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:40:50,342 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:40:50,342 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:40:50,342 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:40:50,342 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:40:50,342 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:40:50,342 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:40:50,342 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:40:50,622 INFO vierol_import.validation.validator: Validierung vierol_e216fe1c_automobile_dataset.csv: 5500 Zeilen, 0 fehlerhaft -> OK
+2026-07-20 23:40:50,622 INFO vierol_import.validation.validator: Validierung vierol_e216fe1c_automobile_dataset.csv: 5500 Zeilen, 0 fehlerhaft -> OK
+2026-07-20 23:40:50,622 INFO vierol_import.validation.validator: Validierung vierol_e216fe1c_automobile_dataset.csv: 5500 Zeilen, 0 fehlerhaft -> OK
+2026-07-20 23:40:50,622 INFO vierol_import.validation.validator: Validierung vierol_e216fe1c_automobile_dataset.csv: 5500 Zeilen, 0 fehlerhaft -> OK
+2026-07-20 23:40:50,622 INFO vierol_import.validation.validator: Validierung vierol_e216fe1c_automobile_dataset.csv: 5500 Zeilen, 0 fehlerhaft -> OK
+2026-07-20 23:40:50,622 INFO vierol_import.validation.validator: Validierung vierol_e216fe1c_automobile_dataset.csv: 5500 Zeilen, 0 fehlerhaft -> OK
+2026-07-20 23:40:50,622 INFO vierol_import.validation.validator: Validierung vierol_e216fe1c_automobile_dataset.csv: 5500 Zeilen, 0 fehlerhaft -> OK
+2026-07-20 23:40:50,622 INFO vierol_import.validation.validator: Validierung vierol_e216fe1c_automobile_dataset.csv: 5500 Zeilen, 0 fehlerhaft -> OK
+2026-07-20 23:40:50,622 INFO vierol_import.validation.validator: Validierung vierol_e216fe1c_automobile_dataset.csv: 5500 Zeilen, 0 fehlerhaft -> OK
+2026-07-20 23:40:50,622 INFO vierol_import.validation.validator: Validierung vierol_e216fe1c_automobile_dataset.csv: 5500 Zeilen, 0 fehlerhaft -> OK
+2026-07-20 23:40:50,622 INFO vierol_import.validation.validator: Validierung vierol_e216fe1c_automobile_dataset.csv: 5500 Zeilen, 0 fehlerhaft -> OK
+2026-07-20 23:40:50,622 INFO vierol_import.validation.validator: Validierung vierol_e216fe1c_automobile_dataset.csv: 5500 Zeilen, 0 fehlerhaft -> OK
+2026-07-20 23:40:50,622 INFO vierol_import.validation.validator: Validierung vierol_e216fe1c_automobile_dataset.csv: 5500 Zeilen, 0 fehlerhaft -> OK
+2026-07-20 23:40:50,622 INFO vierol_import.validation.validator: Validierung vierol_e216fe1c_automobile_dataset.csv: 5500 Zeilen, 0 fehlerhaft -> OK
+2026-07-20 23:40:50,622 INFO vierol_import.validation.validator: Validierung vierol_e216fe1c_automobile_dataset.csv: 5500 Zeilen, 0 fehlerhaft -> OK
+2026-07-20 23:40:50,835 INFO vierol_import.mapping.mapper: Mapping vierol_e216fe1c_automobile_dataset.csv -> 5500 Datensaetze, 18 Zielfelder
+2026-07-20 23:40:50,835 INFO vierol_import.mapping.mapper: Mapping vierol_e216fe1c_automobile_dataset.csv -> 5500 Datensaetze, 18 Zielfelder
+2026-07-20 23:40:50,835 INFO vierol_import.mapping.mapper: Mapping vierol_e216fe1c_automobile_dataset.csv -> 5500 Datensaetze, 18 Zielfelder
+2026-07-20 23:40:50,835 INFO vierol_import.mapping.mapper: Mapping vierol_e216fe1c_automobile_dataset.csv -> 5500 Datensaetze, 18 Zielfelder
+2026-07-20 23:40:50,835 INFO vierol_import.mapping.mapper: Mapping vierol_e216fe1c_automobile_dataset.csv -> 5500 Datensaetze, 18 Zielfelder
+2026-07-20 23:40:50,835 INFO vierol_import.mapping.mapper: Mapping vierol_e216fe1c_automobile_dataset.csv -> 5500 Datensaetze, 18 Zielfelder
+2026-07-20 23:40:50,835 INFO vierol_import.mapping.mapper: Mapping vierol_e216fe1c_automobile_dataset.csv -> 5500 Datensaetze, 18 Zielfelder
+2026-07-20 23:40:50,835 INFO vierol_import.mapping.mapper: Mapping vierol_e216fe1c_automobile_dataset.csv -> 5500 Datensaetze, 18 Zielfelder
+2026-07-20 23:40:50,835 INFO vierol_import.mapping.mapper: Mapping vierol_e216fe1c_automobile_dataset.csv -> 5500 Datensaetze, 18 Zielfelder
+2026-07-20 23:40:50,835 INFO vierol_import.mapping.mapper: Mapping vierol_e216fe1c_automobile_dataset.csv -> 5500 Datensaetze, 18 Zielfelder
+2026-07-20 23:40:50,835 INFO vierol_import.mapping.mapper: Mapping vierol_e216fe1c_automobile_dataset.csv -> 5500 Datensaetze, 18 Zielfelder
+2026-07-20 23:40:50,835 INFO vierol_import.mapping.mapper: Mapping vierol_e216fe1c_automobile_dataset.csv -> 5500 Datensaetze, 18 Zielfelder
+2026-07-20 23:40:50,835 INFO vierol_import.mapping.mapper: Mapping vierol_e216fe1c_automobile_dataset.csv -> 5500 Datensaetze, 18 Zielfelder
+2026-07-20 23:40:50,835 INFO vierol_import.mapping.mapper: Mapping vierol_e216fe1c_automobile_dataset.csv -> 5500 Datensaetze, 18 Zielfelder
+2026-07-20 23:40:50,835 INFO vierol_import.mapping.mapper: Mapping vierol_e216fe1c_automobile_dataset.csv -> 5500 Datensaetze, 18 Zielfelder
+2026-07-20 23:41:05,085 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:41:05,085 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:41:05,085 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:41:05,085 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:41:05,085 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:41:05,085 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:41:05,085 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:41:05,085 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:41:05,085 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:41:05,085 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:41:05,085 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:41:05,085 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:41:05,085 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:41:05,085 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:41:05,085 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:41:05,085 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:41:05,389 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:41:05,389 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:41:05,389 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:41:05,389 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:41:05,389 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:41:05,389 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:41:05,389 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:41:05,389 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:41:05,389 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:41:05,389 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:41:05,389 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:41:05,389 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:41:05,389 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:41:05,389 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:41:05,389 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:41:05,389 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:41:05,389 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:44:02,849 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:44:02,849 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:44:02,849 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:44:02,849 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:44:02,849 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:44:02,849 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:44:02,849 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:44:02,849 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:44:02,849 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:44:02,849 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:44:02,849 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:44:02,849 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:44:02,849 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:44:02,849 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:44:02,849 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:44:02,849 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:44:02,849 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:44:02,849 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:44:10,590 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:44:10,590 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:44:10,590 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:44:10,590 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:44:10,590 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:44:10,590 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:44:10,590 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:44:10,590 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:44:10,590 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:44:10,590 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:44:10,590 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:44:10,590 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:44:10,590 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:44:10,590 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:44:10,590 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:44:10,590 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:44:10,590 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:44:10,590 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:44:10,590 INFO vierol_import.classification.classifier: Klassifikation vierol_e216fe1c_automobile_dataset.csv: bester Kandidat 'fahrzeugdaten' (Score 1.00)
+2026-07-20 23:44:10,807 INFO vierol_import.validation.validator: Validierung vierol_e216fe1c_automobile_dataset.csv: 5500 Zeilen, 0 fehlerhaft -> OK
+2026-07-20 23:44:10,807 INFO vierol_import.validation.validator: Validierung vierol_e216fe1c_automobile_dataset.csv: 5500 Zeilen, 0 fehlerhaft -> OK
+2026-07-20 23:44:10,807 INFO vierol_import.validation.validator: Validierung vierol_e216fe1c_automobile_dataset.csv: 5500 Zeilen, 0 fehlerhaft -> OK
+2026-07-20 23:44:10,807 INFO vierol_import.validation.validator: Validierung vierol_e216fe1c_automobile_dataset.csv: 5500 Zeilen, 0 fehlerhaft -> OK
+2026-07-20 23:44:10,807 INFO vierol_import.validation.validator: Validierung vierol_e216fe1c_automobile_dataset.csv: 5500 Zeilen, 0 fehlerhaft -> OK
+2026-07-20 23:44:10,807 INFO vierol_import.validation.validator: Validierung vierol_e216fe1c_automobile_dataset.csv: 5500 Zeilen, 0 fehlerhaft -> OK
+2026-07-20 23:44:10,807 INFO vierol_import.validation.validator: Validierung vierol_e216fe1c_automobile_dataset.csv: 5500 Zeilen, 0 fehlerhaft -> OK
+2026-07-20 23:44:10,807 INFO vierol_import.validation.validator: Validierung vierol_e216fe1c_automobile_dataset.csv: 5500 Zeilen, 0 fehlerhaft -> OK
+2026-07-20 23:44:10,807 INFO vierol_import.validation.validator: Validierung vierol_e216fe1c_automobile_dataset.csv: 5500 Zeilen, 0 fehlerhaft -> OK
+2026-07-20 23:44:10,807 INFO vierol_import.validation.validator: Validierung vierol_e216fe1c_automobile_dataset.csv: 5500 Zeilen, 0 fehlerhaft -> OK
+2026-07-20 23:44:10,807 INFO vierol_import.validation.validator: Validierung vierol_e216fe1c_automobile_dataset.csv: 5500 Zeilen, 0 fehlerhaft -> OK
+2026-07-20 23:44:10,807 INFO vierol_import.validation.validator: Validierung vierol_e216fe1c_automobile_dataset.csv: 5500 Zeilen, 0 fehlerhaft -> OK
+2026-07-20 23:44:10,807 INFO vierol_import.validation.validator: Validierung vierol_e216fe1c_automobile_dataset.csv: 5500 Zeilen, 0 fehlerhaft -> OK
+2026-07-20 23:44:10,807 INFO vierol_import.validation.validator: Validierung vierol_e216fe1c_automobile_dataset.csv: 5500 Zeilen, 0 fehlerhaft -> OK
+2026-07-20 23:44:10,807 INFO vierol_import.validation.validator: Validierung vierol_e216fe1c_automobile_dataset.csv: 5500 Zeilen, 0 fehlerhaft -> OK
+2026-07-20 23:44:10,807 INFO vierol_import.validation.validator: Validierung vierol_e216fe1c_automobile_dataset.csv: 5500 Zeilen, 0 fehlerhaft -> OK
+2026-07-20 23:44:10,807 INFO vierol_import.validation.validator: Validierung vierol_e216fe1c_automobile_dataset.csv: 5500 Zeilen, 0 fehlerhaft -> OK
+2026-07-20 23:44:10,807 INFO vierol_import.validation.validator: Validierung vierol_e216fe1c_automobile_dataset.csv: 5500 Zeilen, 0 fehlerhaft -> OK
+2026-07-20 23:44:10,807 INFO vierol_import.validation.validator: Validierung vierol_e216fe1c_automobile_dataset.csv: 5500 Zeilen, 0 fehlerhaft -> OK
+2026-07-20 23:44:10,904 INFO vierol_import.mapping.mapper: Mapping vierol_e216fe1c_automobile_dataset.csv -> 5500 Datensaetze, 18 Zielfelder
+2026-07-20 23:44:10,904 INFO vierol_import.mapping.mapper: Mapping vierol_e216fe1c_automobile_dataset.csv -> 5500 Datensaetze, 18 Zielfelder
+2026-07-20 23:44:10,904 INFO vierol_import.mapping.mapper: Mapping vierol_e216fe1c_automobile_dataset.csv -> 5500 Datensaetze, 18 Zielfelder
+2026-07-20 23:44:10,904 INFO vierol_import.mapping.mapper: Mapping vierol_e216fe1c_automobile_dataset.csv -> 5500 Datensaetze, 18 Zielfelder
+2026-07-20 23:44:10,904 INFO vierol_import.mapping.mapper: Mapping vierol_e216fe1c_automobile_dataset.csv -> 5500 Datensaetze, 18 Zielfelder
+2026-07-20 23:44:10,904 INFO vierol_import.mapping.mapper: Mapping vierol_e216fe1c_automobile_dataset.csv -> 5500 Datensaetze, 18 Zielfelder
+2026-07-20 23:44:10,904 INFO vierol_import.mapping.mapper: Mapping vierol_e216fe1c_automobile_dataset.csv -> 5500 Datensaetze, 18 Zielfelder
+2026-07-20 23:44:10,904 INFO vierol_import.mapping.mapper: Mapping vierol_e216fe1c_automobile_dataset.csv -> 5500 Datensaetze, 18 Zielfelder
+2026-07-20 23:44:10,904 INFO vierol_import.mapping.mapper: Mapping vierol_e216fe1c_automobile_dataset.csv -> 5500 Datensaetze, 18 Zielfelder
+2026-07-20 23:44:10,904 INFO vierol_import.mapping.mapper: Mapping vierol_e216fe1c_automobile_dataset.csv -> 5500 Datensaetze, 18 Zielfelder
+2026-07-20 23:44:10,904 INFO vierol_import.mapping.mapper: Mapping vierol_e216fe1c_automobile_dataset.csv -> 5500 Datensaetze, 18 Zielfelder
+2026-07-20 23:44:10,904 INFO vierol_import.mapping.mapper: Mapping vierol_e216fe1c_automobile_dataset.csv -> 5500 Datensaetze, 18 Zielfelder
+2026-07-20 23:44:10,904 INFO vierol_import.mapping.mapper: Mapping vierol_e216fe1c_automobile_dataset.csv -> 5500 Datensaetze, 18 Zielfelder
+2026-07-20 23:44:10,904 INFO vierol_import.mapping.mapper: Mapping vierol_e216fe1c_automobile_dataset.csv -> 5500 Datensaetze, 18 Zielfelder
+2026-07-20 23:44:10,904 INFO vierol_import.mapping.mapper: Mapping vierol_e216fe1c_automobile_dataset.csv -> 5500 Datensaetze, 18 Zielfelder
+2026-07-20 23:44:10,904 INFO vierol_import.mapping.mapper: Mapping vierol_e216fe1c_automobile_dataset.csv -> 5500 Datensaetze, 18 Zielfelder
+2026-07-20 23:44:10,904 INFO vierol_import.mapping.mapper: Mapping vierol_e216fe1c_automobile_dataset.csv -> 5500 Datensaetze, 18 Zielfelder
+2026-07-20 23:44:10,904 INFO vierol_import.mapping.mapper: Mapping vierol_e216fe1c_automobile_dataset.csv -> 5500 Datensaetze, 18 Zielfelder
+2026-07-20 23:44:10,904 INFO vierol_import.mapping.mapper: Mapping vierol_e216fe1c_automobile_dataset.csv -> 5500 Datensaetze, 18 Zielfelder

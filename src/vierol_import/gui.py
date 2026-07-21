@@ -34,6 +34,10 @@ from vierol_import.ingest.watcher import (
     verschiebe_ins_archiv,
     verschiebe_ins_reject,
 )
+from vierol_import.ingest.zip_entpacker import (
+    ZipEntpackfehler,
+    entpacke_rekursiv,
+)
 from vierol_import.monitoring.logger import setup_logging
 
 DEFAULT_CATALOG = Path("config_catalog")
@@ -90,6 +94,9 @@ for key, default in [
     ("ergebnis", None),
     ("gewaehlte_quelle", None),
     ("neue_quelle_dialog", False),
+    ("zip_dateien", None),         # Liste EntpackteDatei nach ZIP-Upload
+    ("zip_verzeichnis", None),     # Temp-Ordner mit den entpackten Dateien
+    ("zip_batch_status", None),    # dict mit Erfolgs/Fehler-Zaehlern
 ]:
     if key not in st.session_state:
         st.session_state[key] = default
@@ -102,11 +109,23 @@ def _temp_datei_loeschen() -> None:
 
 def _session_reset() -> None:
     _temp_datei_loeschen()
+    _zip_verzeichnis_aufraeumen()
     st.session_state.temp_pfad = None
     st.session_state.upload_hash = None
     st.session_state.upload_name = None
     st.session_state.ergebnis = None
     st.session_state.gewaehlte_quelle = None
+    st.session_state.zip_dateien = None
+    st.session_state.zip_verzeichnis = None
+    st.session_state.zip_batch_status = None
+
+
+def _zip_verzeichnis_aufraeumen() -> None:
+    """Loescht den entpackten ZIP-Ordner mitsamt allen Dateien."""
+    import shutil
+    zv = st.session_state.zip_verzeichnis
+    if zv and zv.exists():
+        shutil.rmtree(zv, ignore_errors=True)
 
 
 # --- Layout: Titel + Katalog ------------------------------------------------
@@ -215,32 +234,175 @@ upload = st.file_uploader(
 )
 
 if upload is not None:
-    # Inhalts-Hash statt Dateiname vergleichen — Dienstleister-Dateien haben
-    # oft denselben Namen bei jeder Lieferung.
     inhalt = upload.getvalue()
     neuer_hash = hashlib.sha256(inhalt).hexdigest()
 
     if neuer_hash != st.session_state.upload_hash:
         _temp_datei_loeschen()
+        _zip_verzeichnis_aufraeumen()
 
+        # Datei in Temp-Bereich speichern (Basis fuer Einzel- oder ZIP-Verarbeitung)
         tmp = NamedTemporaryFile(
             delete=False, suffix=Path(upload.name).suffix, prefix="vierol_upload_"
         )
         tmp.write(inhalt)
         tmp.close()
 
-        # Auf einen aussagekraeftigen Namen bringen (kein zufaelliger Temp-Name)
-        # Hash-Praefix haengen wir dran, damit gleiche Dateinamen sich nicht in
-        # die Quere kommen — falls doch mal eine Kollision auftritt.
         hash_kurz = neuer_hash[:8]
         ziel = Path(tmp.name).parent / f"vierol_{hash_kurz}_{upload.name}"
         os.replace(tmp.name, ziel)
 
-        st.session_state.temp_pfad = ziel
+        # ZIP? -> entpacken und Batch-Modus vorbereiten
+        if upload.name.lower().endswith(".zip"):
+            entpack_dir = ziel.with_suffix(".entpackt")
+            try:
+                entpackt = entpacke_rekursiv(ziel, entpack_dir)
+                st.session_state.zip_dateien = entpackt
+                st.session_state.zip_verzeichnis = entpack_dir
+                # Original-ZIP nicht mehr gebraucht
+                ziel.unlink(missing_ok=True)
+                # Einzeldatei-Zustand aus lassen; wir sind im ZIP-Modus
+                st.session_state.temp_pfad = None
+            except ZipEntpackfehler as e:
+                st.error(f"ZIP konnte nicht entpackt werden: {e}")
+                ziel.unlink(missing_ok=True)
+                st.stop()
+        else:
+            # Normale Einzeldatei
+            st.session_state.temp_pfad = ziel
+            st.session_state.zip_dateien = None
+
         st.session_state.upload_hash = neuer_hash
         st.session_state.upload_name = upload.name
         st.session_state.ergebnis = None
+        st.session_state.zip_batch_status = None
 
+
+# --- ZIP-Batch-Modus: eigener Ablauf ----------------------------------------
+# Wenn ein ZIP hochgeladen wurde, zeigen wir eine Datei-Uebersicht und
+# einen Batch-Verarbeitungs-Button. Der Rest der GUI (Einzeldatei-Flow)
+# bleibt danach weitgehend intakt und uebernimmt fuer einzelne Dateien.
+
+
+if st.session_state.zip_dateien is not None:
+    st.header("ZIP-Inhalt")
+    zd = st.session_state.zip_dateien
+    if not zd:
+        st.warning("Das ZIP enthaelt keine Dateien.")
+        if st.button("🔄 Anderes hochladen"):
+            _session_reset()
+            st.rerun()
+        st.stop()
+
+    st.write(
+        f"**{len(zd)}** Datei(en) im ZIP `{st.session_state.upload_name}` "
+        f"({sum(e.groesse for e in zd) / (1024 * 1024):.1f} MB gesamt):"
+    )
+    df_zip = pd.DataFrame([
+        {
+            "Pfad im ZIP": e.original_pfad,
+            "Groesse (KB)": f"{e.groesse / 1024:.1f}",
+        }
+        for e in zd
+    ])
+    st.dataframe(df_zip, hide_index=True, use_container_width=True)
+
+    st.caption(
+        "💡 Der Batch-Import verarbeitet alle Dateien nacheinander mit "
+        "automatischer Quellen-Erkennung (Schwellenwert der jeweiligen Config). "
+        "Dateien ohne sicheren Vorschlag werden abgelehnt. "
+        "Erfolge werden ins Archiv verschoben, Fehler ins Reject-Verzeichnis."
+    )
+
+    col_batch, col_neu = st.columns([1, 1])
+    with col_batch:
+        batch_start = st.button(
+            "🚀 Alle Dateien aus dem ZIP verarbeiten",
+            type="primary", use_container_width=True,
+        )
+    with col_neu:
+        if st.button("🔄 Anderes hochladen", use_container_width=True):
+            _session_reset()
+            st.rerun()
+
+    if batch_start:
+        logger.info(
+            "GUI-ZIP: Batch-Import gestartet, %d Datei(en) aus '%s'",
+            len(zd), st.session_state.upload_name,
+        )
+        stats = {"geladen": 0, "abgelehnt": 0, "quarantaene_gesamt": 0}
+        fortschritt = st.progress(0.0, text="Starte...")
+        ergebnisse_pro_datei = []
+
+        for i, ed in enumerate(zd, start=1):
+            fortschritt.progress(
+                i / len(zd),
+                text=f"[{i}/{len(zd)}] {ed.original_pfad}",
+            )
+            r = engine.verarbeite_auto_und_schreibe(ed.pfad)
+
+            if r.erfolg:
+                ziel = verschiebe_ins_archiv(ed.pfad, DEFAULT_ARCHIVE, r.quelle)  # type: ignore[arg-type]
+                stats["geladen"] += 1
+                if r.quarantaene_zeilen:
+                    schreibe_quarantaene(
+                        ed.pfad, DEFAULT_REJECT, r.quarantaene_zeilen
+                    )
+                    stats["quarantaene_gesamt"] += r.zeilen_quarantaene
+                ergebnisse_pro_datei.append({
+                    "Datei": ed.original_pfad,
+                    "Status": "✅ geladen",
+                    "Quelle": r.quelle,
+                    "geladen": r.zeilen_geladen,
+                    "quarantaene": r.zeilen_quarantaene or "-",
+                    "Detail": f"→ {ziel.name}",
+                })
+            else:
+                verschiebe_ins_reject(
+                    ed.pfad, DEFAULT_REJECT, r.fehler_grund, r.fehler_details
+                )
+                stats["abgelehnt"] += 1
+                ergebnisse_pro_datei.append({
+                    "Datei": ed.original_pfad,
+                    "Status": "❌ abgelehnt",
+                    "Quelle": r.quelle or "—",
+                    "geladen": 0,
+                    "quarantaene": "-",
+                    "Detail": r.fehler_grund,
+                })
+
+        fortschritt.empty()
+        st.session_state.zip_batch_status = stats
+
+        if stats["abgelehnt"] == 0:
+            st.success(
+                f"✅ Alle {stats['geladen']} Dateien erfolgreich verarbeitet."
+                + (
+                    f" ({stats['quarantaene_gesamt']} Zeilen in Quarantaene)"
+                    if stats["quarantaene_gesamt"] else ""
+                )
+            )
+        else:
+            st.warning(
+                f"Verarbeitung fertig: {stats['geladen']} geladen, "
+                f"{stats['abgelehnt']} abgelehnt."
+            )
+
+        st.subheader("Ergebnisse pro Datei")
+        st.dataframe(
+            pd.DataFrame(ergebnisse_pro_datei),
+            hide_index=True, use_container_width=True,
+        )
+
+        logger.info(
+            "GUI-ZIP: Batch fertig — %d geladen, %d abgelehnt, %d in Quarantaene",
+            stats["geladen"], stats["abgelehnt"], stats["quarantaene_gesamt"],
+        )
+
+    st.stop()
+
+
+# --- Ab hier: normaler Einzeldatei-Flow -------------------------------------
 
 if st.session_state.temp_pfad is None:
     st.info("Bitte eine Datei zum Import auswaehlen.")
