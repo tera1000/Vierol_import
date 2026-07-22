@@ -70,6 +70,45 @@ class VorschlagsRanking:
         kandidaten = [e for e in self.ergebnisse if e.moeglich]
         return kandidaten[0] if kandidaten else None
 
+    def ist_eindeutig(
+        self, schwellenwert: float, mindest_vorsprung: float = 0.10
+    ) -> bool:
+        """Zuordnung eindeutig, wenn:
+          - der beste Kandidat ueber der Schwelle liegt UND
+          - er einen deutlichen Vorsprung zum Zweitbesten hat.
+
+        Wird vom Batch-Modus (ZIP-Import, run) genutzt, um zu
+        entscheiden, ob eine Datei ohne Rueckfrage durchlaufen darf
+        oder ob der User bei Mehrdeutigkeit einbezogen werden muss.
+        """
+        kandidaten = [e for e in self.ergebnisse if e.moeglich]
+        if not kandidaten:
+            return False
+        if kandidaten[0].score < schwellenwert:
+            return False
+        # Nur ein Kandidat -> automatisch eindeutig
+        if len(kandidaten) < 2:
+            return True
+        vorsprung = kandidaten[0].score - kandidaten[1].score
+        return vorsprung >= mindest_vorsprung
+
+    def ist_eindeutig(self, schwellenwert_fuer_bester: float) -> bool:
+        """True wenn genau EINE Quelle ueber ihrer Schwelle liegt.
+
+        Sicherheits-Check fuer den Batch-Modus: Automatik nur wenn kein
+        anderer Kandidat auch nahe rankomat. Vermeidet, dass Dateien
+        automatisch in die falsche Zieltabelle geschrieben werden, wenn
+        zwei Configs strukturell gleich aussehen."""
+        kandidaten = [e for e in self.ergebnisse if e.moeglich]
+        if not kandidaten:
+            return False
+        if kandidaten[0].score < schwellenwert_fuer_bester:
+            return False
+        # Zweiter Kandidat auch ueber (irgend-)Schwellenwert? -> mehrdeutig
+        if len(kandidaten) >= 2 and kandidaten[1].score >= schwellenwert_fuer_bester:
+            return False
+        return True
+
 
 # --- Kern-Logik ---------------------------------------------------------------
 
