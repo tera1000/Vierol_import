@@ -1,38 +1,38 @@
 """
 Zentrales Logging-Setup.
 
-Grundsatz: Das CLI kommuniziert mit dem User ueber click.echo (bewusst
-gestaltete Ausgabe), das Logging dient der NACHVOLLZIEHBARKEIT
-(Kontrolle-Stufe der Architektur). Im Normalbetrieb bleibt die Konsole
-daher ruhig (nur Warnungen); mit --verbose wird jeder Pipeline-Schritt
-sichtbar. Zusaetzlich schreibt ein File-Handler alle Details in eine
-Logdatei — die Basis fuer den spaeteren Lauf-Report.
+Design-Entscheidung: Datei-Log wurde durch die Audit-Tabelle in der
+SQLite-DB ersetzt (`audit_log.py`). Das reine Python-Logging schreibt
+nur noch in die Konsole und dient dem Debugging / operativen Feedback,
+NICHT der dauerhaften Protokollierung.
+
+Warum: Das Datei-Log war schwer auswertbar (Textzeilen, keine Filter),
+und der Fachbereich hat Reporting-Bedarf. Eine SQLite-Tabelle ist
+auswertbar per SQL / Excel / Power BI.
+
+Wer den Verlauf aufrufen will: `python -m vierol_import zeige-log`
+oder direkt in der DB die Tabelle `import_lauf` abfragen.
 """
 
 from __future__ import annotations
 
 import logging
-from pathlib import Path
-
-LOG_DATEI = Path("data/import.log")
 
 
 def setup_logging(verbose: bool = False) -> None:
+    """Konsolen-Logging einrichten.
+
+    Ohne `verbose`: nur WARNING/ERROR sichtbar (ruhige Konsole).
+    Mit `verbose`: alle Pipeline-Schritte sichtbar (Debug-Sitzung).
+    """
     root = logging.getLogger()
     root.setLevel(logging.DEBUG)
+
+    # Falls doppelt initialisiert (z.B. Streamlit-Rerun): saeubern.
+    for h in list(root.handlers):
+        root.removeHandler(h)
 
     konsole = logging.StreamHandler()
     konsole.setLevel(logging.DEBUG if verbose else logging.WARNING)
     konsole.setFormatter(logging.Formatter("%(levelname)s %(name)s: %(message)s"))
     root.addHandler(konsole)
-
-    try:
-        LOG_DATEI.parent.mkdir(parents=True, exist_ok=True)
-        datei = logging.FileHandler(LOG_DATEI, encoding="utf-8")
-        datei.setLevel(logging.DEBUG)
-        datei.setFormatter(
-            logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s")
-        )
-        root.addHandler(datei)
-    except OSError:
-        root.warning("Logdatei %s nicht schreibbar — nur Konsolen-Logging.", LOG_DATEI)

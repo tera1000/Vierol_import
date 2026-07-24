@@ -30,6 +30,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from vierol_import.catalog.meta_schema import QuellenConfig
+from vierol_import.encoding_erkennung import erkenne_encoding
 from vierol_import.typen import passt_zelle
 
 logger = logging.getLogger(__name__)
@@ -136,8 +137,9 @@ def _lese_stichprobe(
 def bewerte_datei(file_path: Path, cfg: QuellenConfig) -> KlassifikationsErgebnis:
     """Eine Datei gegen genau eine Quellen-Config bewerten."""
     d = cfg.datei
+    encoding = erkenne_encoding(file_path, wunsch=d.encoding)
     zeilen = _lese_stichprobe(
-        file_path, d.trennzeichen, d.encoding, cfg.klassifikation.stichprobe_zeilen
+        file_path, d.trennzeichen, encoding, cfg.klassifikation.stichprobe_zeilen
     )
 
     # K.O. a): nicht parsebar

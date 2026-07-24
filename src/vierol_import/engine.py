@@ -38,8 +38,10 @@ from vierol_import.classification.classifier import (
     VorschlagsRanking,
     klassifiziere,
 )
+from vierol_import.encoding_erkennung import erkenne_encoding
 from vierol_import.loading.loader import PKKonfliktFehler, lade_sqlite
 from vierol_import.mapping.mapper import MappingErgebnis, mappe
+from vierol_import.monitoring.audit_log import logge_lauf
 from vierol_import.validation.validator import ValidierungsFehler, validiere
 
 logger = logging.getLogger(__name__)
@@ -99,12 +101,16 @@ class ImportEngine:
         configs: dict[str, QuellenConfig],
         db_pfad: Path,
         ladezeit: datetime | None = None,
+        benutzer_modus: str = "cli",
     ) -> None:
         if not configs:
             raise ValueError("Engine braucht mindestens eine Config.")
         self.configs = configs
         self.db_pfad = db_pfad
         self.ladezeit = ladezeit or datetime.now()
+        # Wird ins Audit-Log geschrieben, damit man spaeter sieht,
+        # ob ein Lauf aus CLI, GUI, Batch etc. kam.
+        self.benutzer_modus = benutzer_modus
 
     # --- Modus 1: automatisch (Batch) ----------------------------------------
 
@@ -118,7 +124,7 @@ class ImportEngine:
         bester = ranking.bester
 
         if bester is None:
-            return VerarbeitungsErgebnis(
+            e = VerarbeitungsErgebnis(
                 datei=datei,
                 status=Status.ABGELEHNT_UNBEKANNT,
                 ranking=ranking,
@@ -127,11 +133,13 @@ class ImportEngine:
                     f"{e.quelle}: {e.ko_grund}" for e in ranking.ergebnisse
                 ],
             )
+            self._loggen(e)
+            return e
 
         cfg = self.configs[bester.quelle]
         schwelle = cfg.klassifikation.schwellenwert
         if bester.score < schwelle:
-            return VerarbeitungsErgebnis(
+            e = VerarbeitungsErgebnis(
                 datei=datei,
                 status=Status.ABGELEHNT_UNSICHER,
                 quelle=bester.quelle,
@@ -143,8 +151,13 @@ class ImportEngine:
                 ),
                 fehler_details=[self._ranking_zeile(e) for e in ranking.ergebnisse],
             )
+            self._loggen(e)
+            return e
 
-        return self._verarbeite_mit_quelle(datei, cfg, ranking, bester)
+        e = self._verarbeite_mit_quelle(datei, cfg, ranking, bester)
+        if not e.bereit_zum_schreiben:
+            self._loggen(e)
+        return e
 
     # --- Modus 2: mit vorgegebener Quelle (interaktiv oder --quelle) ---------
 
@@ -157,7 +170,12 @@ class ImportEngine:
                 f"Quelle '{quelle}' nicht im Katalog. Verfuegbar: "
                 f"{sorted(self.configs)}"
             )
-        return self._verarbeite_mit_quelle(datei, self.configs[quelle], None, None)
+        e = self._verarbeite_mit_quelle(datei, self.configs[quelle], None, None)
+        # Bei Ablehnung sofort loggen (schreibe() wird nicht mehr aufgerufen).
+        # Bei bereit_zum_schreiben: NICHT loggen — das macht schreibe() spaeter.
+        if not e.bereit_zum_schreiben:
+            self._loggen(e)
+        return e
 
     # --- gemeinsamer Kern ----------------------------------------------------
 
@@ -240,7 +258,8 @@ class ImportEngine:
             )
 
         ergebnis = []
-        with open(datei, newline="", encoding=cfg.datei.encoding) as fh:
+        encoding = erkenne_encoding(datei, wunsch=cfg.datei.encoding)
+        with open(datei, newline="", encoding=encoding) as fh:
             reader = _csv.reader(fh, delimiter=cfg.datei.trennzeichen)
             start = 2 if cfg.datei.hat_header else 1
             if cfg.datei.hat_header:
@@ -279,7 +298,30 @@ class ImportEngine:
             ergebnis.status = Status.ABGELEHNT_LADEFEHLER
             ergebnis.fehler_grund = f"Fehler beim Laden: {ex}"
 
+        # Audit-Log-Eintrag fuer diese Datei schreiben (Erfolg oder Fehler)
+        self._loggen(ergebnis)
         return ergebnis
+
+    def _loggen(self, ergebnis: VerarbeitungsErgebnis) -> None:
+        """Ein Ergebnis in die Audit-Tabelle schreiben.
+
+        Wird bei jedem definitiven End-Zustand aufgerufen (Erfolg oder
+        Ablehnung). Fehler beim Schreiben ins Audit-Log dürfen nie den
+        Import selbst kaputt machen — das behandelt logge_lauf intern.
+        """
+        logge_lauf(
+            self.db_pfad,
+            dateiname=ergebnis.datei.name,
+            status=ergebnis.status.value,
+            quelle=ergebnis.quelle,
+            score=ergebnis.score,
+            zeilen_gesamt=ergebnis.zeilen_gesamt,
+            zeilen_geladen=ergebnis.zeilen_geladen,
+            zeilen_uebersprungen=ergebnis.zeilen_uebersprungen,
+            zeilen_quarantaene=ergebnis.zeilen_quarantaene,
+            fehler_grund=ergebnis.fehler_grund,
+            benutzer_modus=self.benutzer_modus,
+        )
 
     def verarbeite_auto_und_schreibe(self, datei: Path) -> VerarbeitungsErgebnis:
         """Batch-Convenience: `verarbeite_auto()` + direkt `schreibe()`.

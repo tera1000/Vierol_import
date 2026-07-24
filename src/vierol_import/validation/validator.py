@@ -22,6 +22,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from vierol_import.catalog.meta_schema import QuellenConfig
+from vierol_import.encoding_erkennung import erkenne_encoding
 from vierol_import.typen import konvertiere, passt_zelle
 
 logger = logging.getLogger(__name__)
@@ -73,7 +74,8 @@ def validiere(
     d = cfg.datei
 
     try:
-        f = open(file_path, newline="", encoding=d.encoding)
+        encoding = erkenne_encoding(file_path, wunsch=d.encoding)
+        f = open(file_path, newline="", encoding=encoding)
     except OSError as e:
         ergebnis.ok = False
         ergebnis.fehler.append(

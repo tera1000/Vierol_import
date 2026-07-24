@@ -32,6 +32,7 @@ from pathlib import Path
 from typing import Any, Callable, Iterator
 
 from vierol_import.catalog.meta_schema import QuellenConfig
+from vierol_import.encoding_erkennung import erkenne_encoding
 from vierol_import.typen import konvertiere
 
 logger = logging.getLogger(__name__)
@@ -130,7 +131,8 @@ def _mappe_iter(
             )
         abgeleitete_werte[af.ziel] = funktion(file_path, ladezeit)
 
-    with open(file_path, newline="", encoding=d.encoding) as f:
+    encoding = erkenne_encoding(file_path, wunsch=d.encoding)
+    with open(file_path, newline="", encoding=encoding) as f:
         reader = csv.reader(f, delimiter=d.trennzeichen)
         start_zeile = 2 if d.hat_header else 1
         if d.hat_header:

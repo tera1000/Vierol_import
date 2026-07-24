@@ -170,7 +170,9 @@ def import_file(
     # Quellenwahl: entweder vorgegeben oder ueber Ranking + User-Entscheidung
     if quelle is None:
         ranking = klassifiziere(datei, result.configs)
-        gewaehlt = _quelle_waehlen(ranking, result.configs, auto_ja=ja)
+        gewaehlt = _quelle_waehlen(
+            ranking, result.configs, auto_ja=ja, datei=datei, db_pfad=db,
+        )
         if gewaehlt is None:
             raise SystemExit(1)
         quelle = gewaehlt.name
@@ -232,6 +234,8 @@ def _quelle_waehlen(
     ranking: VorschlagsRanking,
     configs: dict[str, QuellenConfig],
     auto_ja: bool,
+    datei: Path,
+    db_pfad: Path,
 ) -> QuellenConfig | None:
     click.echo(f"Erkennung fuer '{ranking.datei.name}':")
     kandidaten = [e for e in ranking.ergebnisse if e.moeglich]
@@ -248,6 +252,16 @@ def _quelle_waehlen(
         click.secho("Keine Quelle im Katalog passt zu dieser Datei.", fg="yellow")
         click.echo(
             "-> Hier startet spaeter der Assistent zum Anlegen einer neuen Config."
+        )
+        # Auch nicht-erkannte Dateien werden protokolliert, damit im Audit-
+        # Log lueckenlos alle Import-Versuche stehen.
+        from vierol_import.monitoring.audit_log import logge_lauf
+        logge_lauf(
+            db_pfad,
+            dateiname=datei.name,
+            status="abgelehnt_unbekannt",
+            fehler_grund="Keine Config passt zu dieser Datei",
+            benutzer_modus="cli-file",
         )
         return None
 
@@ -500,7 +514,7 @@ def import_zip(
     if sicher and modus_sicher == "a":
         for ed, ranking, cfg in sicher:
             click.echo(f"[{ed.original_pfad}] \u2192 {cfg.zielsystem.tabelle}")
-            _verarbeite_einzeln(
+            _verarbeite_mit_wechsel(
                 ed, cfg.name, engine, archive, reject, stats,
                 mit_bestaetigung=False,
             )
@@ -508,7 +522,7 @@ def import_zip(
         for ed, ranking, cfg in sicher:
             click.echo()
             click.echo(f"[{ed.original_pfad}] \u2192 {cfg.zielsystem.tabelle}")
-            _verarbeite_einzeln(
+            _verarbeite_mit_wechsel(
                 ed, cfg.name, engine, archive, reject, stats,
                 mit_bestaetigung=True,
             )
@@ -566,7 +580,10 @@ def import_zip(
                     stats["uebersprungen"] += 1
                     continue
                 gewaehlt = gewaehlte_erg.quelle
-            _verarbeite_einzeln(ed, gewaehlt, engine, archive, reject, stats)
+            _verarbeite_mit_wechsel(
+                ed, gewaehlt, engine, archive, reject, stats,
+                mit_bestaetigung=True,
+            )
 
     # 6. Kein Match: alle rejecten
     for ed, ranking in kein_match:
@@ -592,16 +609,43 @@ def import_zip(
     )
 
 
-def _verarbeite_einzeln(
+def _verarbeite_mit_wechsel(
     ed, quelle: str, engine: ImportEngine, archive: Path, reject: Path,
     stats: dict, mit_bestaetigung: bool = False,
 ) -> None:
+    """Wrapper um _verarbeite_einzeln, der User-Quellenwechsel handhabt.
+
+    Wenn _verarbeite_einzeln 'wechsel:<neu>' zurueckliefert, wird der
+    Vorgang mit der neuen Quelle wiederholt. Endlos-Loop-Schutz durch
+    Aussschluss der aktuellen Quelle bei _neue_quelle_waehlen.
+    """
+    aktuelle_quelle = quelle
+    while True:
+        result = _verarbeite_einzeln(
+            ed, aktuelle_quelle, engine, archive, reject, stats,
+            mit_bestaetigung=mit_bestaetigung,
+        )
+        if not result.startswith("wechsel:"):
+            return
+        aktuelle_quelle = result.split(":", 1)[1]
+
+
+def _verarbeite_einzeln(
+    ed, quelle: str, engine: ImportEngine, archive: Path, reject: Path,
+    stats: dict, mit_bestaetigung: bool = False,
+) -> str:
     """Eine Datei mit gegebener Quelle voll durchziehen (Validieren, Mappen,
     Schreiben) und stats aktualisieren.
 
-    Mit `mit_bestaetigung=True` wird nach dem Mapping eine Kurzvorschau
-    gezeigt und der User um Freigabe gebeten — analog zum Einzeldatei-
-    Import (`import-file`). Ohne den Flag laeuft alles unbeaufsichtigt.
+    Rueckgabe:
+      "ok"     — Datei wurde geladen / abgelehnt / uebersprungen (endgueltig)
+      "wechsel:<quelle>" — User hat eine andere Quelle gewaehlt; der
+                           Aufrufer sollte erneut _verarbeite_einzeln
+                           mit dieser Quelle rufen.
+
+    Mit `mit_bestaetigung=True` wird nach dem Mapping eine Vorschau
+    inklusive gruppierter Fehler gezeigt und der User um Freigabe
+    gebeten — analog zum Einzeldatei-Import (`import-file`).
     """
     ergebnis = engine.verarbeite_mit_quelle(ed.pfad, quelle)
     if not ergebnis.bereit_zum_schreiben:
@@ -610,21 +654,42 @@ def _verarbeite_einzeln(
         )
         click.secho(f"  \u2192 abgelehnt: {ergebnis.fehler_grund}", fg="red")
         stats["abgelehnt"] += 1
-        return
+        return "ok"
 
     if mit_bestaetigung:
-        # Kurzvorschau: Anzahl, Zieltabelle, ggf. Quarantaene-Hinweis
-        info = (
+        click.echo(
             f"  {len(ergebnis.mapping.saetze)} Datensaetze bereit "
             f"\u2192 Tabelle {ergebnis.cfg.zielsystem.tabelle}"
         )
         if ergebnis.zeilen_quarantaene:
-            info += f", {ergebnis.zeilen_quarantaene} in Quarantaene"
-        click.echo(info)
-        if not click.confirm("  Schreiben?", default=True):
+            _zeige_fehler_gruppiert_cli(
+                ergebnis.zeilen_quarantaene, ergebnis.fehler_details,
+            )
+
+        entscheidung = _bestaetigungs_menue(bool(ergebnis.zeilen_quarantaene))
+
+        if entscheidung == "d":
+            # Alle Details anzeigen, dann nochmal fragen (ohne Quelle wechseln)
+            for f in ergebnis.fehler_details[:200]:
+                click.echo(f"    {f}")
+            if len(ergebnis.fehler_details) > 200:
+                click.echo(f"    ... ({len(ergebnis.fehler_details) - 200} weitere)")
+            entscheidung = _bestaetigungs_menue(bool(ergebnis.zeilen_quarantaene),
+                                                inklusive_d=False)
+
+        if entscheidung == "n":
             click.secho("  \u2192 uebersprungen (nicht geschrieben)", fg="yellow")
             stats["uebersprungen"] += 1
-            return
+            return "ok"
+
+        if entscheidung == "q":
+            neue_quelle = _neue_quelle_waehlen(engine, aktuelle=quelle)
+            if neue_quelle is None:
+                click.secho("  \u2192 uebersprungen (kein Quellenwechsel)", fg="yellow")
+                stats["uebersprungen"] += 1
+                return "ok"
+            click.echo(f"  Wechsel zu Quelle '{neue_quelle}' \u2014 neu pruefen ...")
+            return f"wechsel:{neue_quelle}"
 
     engine.schreibe(ergebnis)
     if ergebnis.erfolg:
@@ -651,6 +716,128 @@ def _verarbeite_einzeln(
             fg="red",
         )
         stats["abgelehnt"] += 1
+    return "ok"
+
+
+def _bestaetigungs_menue(hat_quarantaene: bool, inklusive_d: bool = True) -> str:
+    """CLI-Menue vor dem Schreiben. Rueckgabe: 'y', 'n', 'q', 'd'."""
+    optionen = "  y \u2014 schreiben"
+    optionen += "\n  n \u2014 nicht schreiben (uebersprungen)"
+    optionen += "\n  q \u2014 andere Quelle waehlen"
+    if hat_quarantaene and inklusive_d:
+        optionen += "\n  d \u2014 Fehler-Details vollstaendig anzeigen"
+    click.echo("  Aktionen:")
+    click.echo(optionen)
+
+    erlaubt = {"y", "n", "q"}
+    if hat_quarantaene and inklusive_d:
+        erlaubt.add("d")
+    prompt_text = f"  Auswahl [{'/'.join(sorted(erlaubt))}]"
+
+    while True:
+        ans = click.prompt(prompt_text, default="y").strip().lower()
+        if ans in erlaubt:
+            return ans
+        click.secho("  Ungueltige Eingabe. Nochmal.", fg="red")
+
+
+def _neue_quelle_waehlen(engine: ImportEngine, aktuelle: str) -> str | None:
+    """Bietet dem User alle Configs zur Auswahl (ohne die aktuelle)."""
+    andere = [q for q in sorted(engine.configs) if q != aktuelle]
+    if not andere:
+        click.secho("  Keine andere Quelle im Katalog verfuegbar.", fg="yellow")
+        return None
+    click.echo("  Verfuegbare Quellen:")
+    for i, q in enumerate(andere, start=1):
+        tabelle = engine.configs[q].zielsystem.tabelle
+        click.echo(f"    {i}. {q}  \u2192  Tabelle {tabelle}")
+    click.echo("    x. abbrechen (uebersprungen)")
+
+    while True:
+        ans = click.prompt("  Auswahl", default="x").strip().lower()
+        if ans == "x":
+            return None
+        if ans.isdigit():
+            idx = int(ans) - 1
+            if 0 <= idx < len(andere):
+                return andere[idx]
+        click.secho("  Ungueltige Eingabe.", fg="red")
+
+
+def _zeige_fehler_gruppiert_cli(anzahl: int, fehler_details: list[str]) -> None:
+    """CLI-Version der Fehler-Gruppierung: kompakt und lesbar in einer
+    Konsole. Zeigt die haeufigsten Kategorien mit Beispiel-Wert."""
+    from collections import Counter
+    import re as _re
+
+    kategorien: Counter[str] = Counter()
+    beispiele: dict[str, str] = {}
+
+    for zeile in fehler_details:
+        m = _re.match(r"Zeile \d+, Spalte '([^']+)': '([^']*)' \u2014 (.+)", zeile)
+        if m:
+            spalte, wert, grund = m.groups()
+            kat = f"Spalte '{spalte}': {grund}"
+            kategorien[kat] += 1
+            beispiele.setdefault(kat, wert)
+            continue
+        m2 = _re.match(r"Zeile \d+: (.+)", zeile)
+        if m2:
+            kategorien[m2.group(1)] += 1
+            continue
+        kategorien[zeile] += 1
+
+    click.secho(
+        f"  \u26a0 {anzahl} Zeilen in Quarantaene "
+        f"({len(kategorien)} unterschiedliche Fehlerkategorie(n)):",
+        fg="yellow",
+    )
+    # Top 5 direkt anzeigen, Rest nur zaehlen
+    top = kategorien.most_common(5)
+    for kat, cnt in top:
+        beispiel = beispiele.get(kat)
+        beispiel_txt = f"   (Beispiel: '{beispiel}')" if beispiel else ""
+        click.echo(f"      {cnt:>6}x  {kat}{beispiel_txt}")
+    if len(kategorien) > 5:
+        rest = sum(cnt for _, cnt in kategorien.most_common()[5:])
+        click.echo(f"      {rest:>6}x  ... in {len(kategorien) - 5} weiteren Kategorien")
+
+
+# --- zeige-log (letzte N Eintraege aus der Audit-Tabelle) -------------------
+
+
+@cli.command("zeige-log")
+@click.option("--db", type=click.Path(dir_okay=False, path_type=Path),
+              default=DEFAULT_DB, show_default=True)
+@click.option("-n", "--anzahl", type=int, default=20, show_default=True,
+              help="Wie viele der letzten Eintraege anzeigen.")
+def zeige_log(db: Path, anzahl: int) -> None:
+    """Die letzten Import-Vorgaenge aus der Audit-Tabelle anzeigen."""
+    from vierol_import.monitoring.audit_log import hole_letzte
+
+    eintraege = hole_letzte(db, anzahl=anzahl)
+    if not eintraege:
+        click.echo("Noch keine Import-Vorgaenge im Log.")
+        return
+
+    click.echo(
+        f"{'Zeit':<20} {'Datei':<32} {'Quelle':<20} "
+        f"{'Status':<25} {'geladen':>8} {'quaran':>8}"
+    )
+    click.echo("-" * 118)
+    for e in eintraege:
+        zeit = (e.get("zeitstempel") or "")[:19]
+        datei = (e.get("dateiname") or "")[:31]
+        quelle = (e.get("quelle") or "-")[:19]
+        status = (e.get("status") or "-")[:24]
+        geladen = e.get("zeilen_geladen") or 0
+        quaran = e.get("zeilen_quarantaene") or 0
+        farbe = "green" if e.get("status") == "geladen" else "yellow"
+        click.secho(
+            f"{zeit:<20} {datei:<32} {quelle:<20} "
+            f"{status:<25} {geladen:>8} {quaran:>8}",
+            fg=farbe,
+        )
 
 
 # --- watch (kontinuierliche Ueberwachung) ------------------------------------
