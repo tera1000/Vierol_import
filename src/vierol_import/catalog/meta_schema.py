@@ -178,7 +178,7 @@ class MappingConfig(StrictModel):
 
 
 class ZielsystemConfig(StrictModel):
-    typ: Literal["sqlite"] = "sqlite"
+    typ: Literal["sqlite", "oracle"] = "sqlite"
     tabelle: str
     upsert_key: list[str] = Field(default_factory=list)
     pk_konflikt: Literal["skip", "update", "reject"] = Field(

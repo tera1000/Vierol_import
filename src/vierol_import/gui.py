@@ -94,6 +94,7 @@ for key, default in [
     ("ergebnis", None),
     ("gewaehlte_quelle", None),
     ("neue_quelle_dialog", False),
+    ("schnellimport_schreiben", False),
     ("zip_dateien", None),         # Liste EntpackteDatei nach ZIP-Upload
     ("zip_verzeichnis", None),     # Temp-Ordner mit den entpackten Dateien
     ("zip_batch_status", None),    # dict mit Erfolgs/Fehler-Zaehlern
@@ -390,128 +391,213 @@ if st.session_state.zip_dateien is not None:
         f"({sum(e.groesse for e in zd) / (1024 * 1024):.1f} MB gesamt)"
     )
 
-    # Erkennung + Vor-Ergebnis fuer jede Datei ---------------------------
-    # Wird bei jedem Rerun neu berechnet — Streamlit-Renders sind guenstig
-    # und die Ergebnisse haengen davon ab, welche Quelle der User waehlt.
-
-    st.caption(
-        "💡 Fuer jede Datei kannst du die Quelle bestaetigen oder aendern. "
-        "'Pruefen' unten laeuft dann ueber alle ausgewaehlten Dateien; "
-        "geschrieben wird erst mit dem zweiten Button."
-    )
-
-    # Fuer die Anzeige: Ranking pro Datei einmal ausfuehren
-    rankings: dict[str, list] = {}
-    for ed in zd:
-        r = klassifiziere(ed.pfad, engine.configs)
-        rankings[ed.original_pfad] = r.ergebnisse
-
-    # Dropdown-Werte: erste erlaubte Option ist ein "nicht importieren"-Sentinel
+    # Klassifikation vor allen anderen Schritten -----------------------------
+    # Datei fuer Datei in drei Gruppen: sicher / unsicher / kein Match.
     NICHT_IMPORTIEREN = "— nicht importieren —"
     dropdown_optionen = [NICHT_IMPORTIEREN] + quellen
 
-    # Pro Datei den Vorschlag und die aktuelle User-Wahl speichern
-    if "zip_wahl" not in st.session_state or st.session_state.zip_wahl is None:
-        # Erst-Init: Vorschlag als Default
-        wahl_default = {}
-        for ed in zd:
-            r = rankings[ed.original_pfad]
-            kandidaten = [x for x in r if x.moeglich]
-            if kandidaten and kandidaten[0].score >= engine.configs[
-                kandidaten[0].quelle
-            ].klassifikation.schwellenwert:
-                wahl_default[ed.original_pfad] = kandidaten[0].quelle
-            else:
-                wahl_default[ed.original_pfad] = NICHT_IMPORTIEREN
-        st.session_state.zip_wahl = wahl_default
+    sicher = []      # (EntpackteDatei, cfg)
+    unsicher = []    # (EntpackteDatei, ranking)
+    kein_match = []  # (EntpackteDatei, ranking)
 
-    # Uebersichts-Tabelle mit Dropdown pro Zeile ---------------------------
-    st.subheader("Dateien im ZIP")
     for ed in zd:
-        col_datei, col_dropdown = st.columns([3, 2])
-        with col_datei:
-            r = rankings[ed.original_pfad]
-            bester = next((x for x in r if x.moeglich), None)
-            if bester:
-                vorschlag = f"{bester.quelle} ({bester.score:.0%})"
+        ranking = klassifiziere(ed.pfad, engine.configs)
+        bester = ranking.bester
+        if bester is None:
+            kein_match.append((ed, ranking))
+        else:
+            schwelle = engine.configs[bester.quelle].klassifikation.schwellenwert
+            if ranking.ist_eindeutig(schwelle):
+                sicher.append((ed, engine.configs[bester.quelle], ranking))
             else:
-                vorschlag = "(keine Quelle passt)"
-            st.markdown(f"📄 **{ed.original_pfad}**")
-            st.caption(f"Erkennungs-Vorschlag: {vorschlag}")
+                unsicher.append((ed, ranking))
 
-        with col_dropdown:
-            current = st.session_state.zip_wahl.get(ed.original_pfad, NICHT_IMPORTIEREN)
-            idx = dropdown_optionen.index(current) if current in dropdown_optionen else 0
-            neue_wahl = st.selectbox(
-                f"Quelle fuer {ed.original_pfad}",
-                options=dropdown_optionen,
-                index=idx,
-                key=f"quelle_{ed.original_pfad}",
-                label_visibility="collapsed",
+    # Uebersicht ------------------------------------------------------------
+    st.subheader("Uebersicht")
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("✓ sicher", len(sicher))
+    with col2:
+        st.metric("? unsicher", len(unsicher))
+    with col3:
+        st.metric("✗ kein Match", len(kein_match))
+
+    # Speicher fuer Wahl der unsicheren
+    if st.session_state.zip_wahl is None:
+        st.session_state.zip_wahl = {}
+    for ed, ranking in unsicher:
+        if ed.original_pfad not in st.session_state.zip_wahl:
+            st.session_state.zip_wahl[ed.original_pfad] = ranking.bester.quelle
+
+    # Pruef-Speicher initialisieren
+    if st.session_state.zip_pruefungen is None:
+        st.session_state.zip_pruefungen = {}
+
+    def _pruefe_datei(ed_obj, quelle: str) -> None:
+        """Eine einzelne Datei pruefen und Ergebnis speichern."""
+        with st.spinner(f"Pruefe {ed_obj.original_pfad} ..."):
+            st.session_state.zip_pruefungen[ed_obj.original_pfad] = (
+                engine.verarbeite_mit_quelle(ed_obj.pfad, quelle)
             )
-            st.session_state.zip_wahl[ed.original_pfad] = neue_wahl
+
+    # Sichere Dateien anzeigen ---------------------------------------------
+    if sicher:
+        st.markdown("### ✓ Sicher zugeordnet")
+        st.caption(
+            "Diese Dateien werden dem eindeutigen Vorschlag zugeordnet. "
+            "Rechts pro Zeile ein 'Pruefen'-Button; ganz unten dann 'Schreiben'."
+        )
+        for ed, cfg, ranking in sicher:
+            col_datei, col_info, col_pruef = st.columns([3, 2, 1])
+            with col_datei:
+                st.markdown(f"📄 **{ed.original_pfad}**")
+                st.caption(
+                    f"{cfg.name} → `{cfg.zielsystem.tabelle}` "
+                    f"({ranking.bester.score:.0%})"
+                )
+            with col_info:
+                # Status-Anzeige, sofern gepruefft
+                erg = st.session_state.zip_pruefungen.get(ed.original_pfad)
+                if erg is None:
+                    st.caption("⏳ noch nicht geprueft")
+                elif erg.bereit_zum_schreiben:
+                    txt = f"✅ bereit ({len(erg.mapping.saetze)} Zeilen)"
+                    if erg.zeilen_quarantaene:
+                        txt += f" · ⚠️ {erg.zeilen_quarantaene} in Quarantaene"
+                    st.caption(txt)
+                else:
+                    st.caption(f"❌ {erg.fehler_grund[:60]}")
+            with col_pruef:
+                if st.button("🔍 Pruefen", key=f"pruef_sicher_{ed.original_pfad}",
+                             use_container_width=True):
+                    _pruefe_datei(ed, cfg.name)
+                    st.rerun()
+
+    # Unsichere: Dropdowns -------------------------------------------------
+    if unsicher:
+        st.markdown("### ? Unsicher — bitte Quelle wählen")
+        st.caption(
+            "Diese Dateien passen strukturell auf mehrere Quellen oder haben "
+            "einen knappen Score. Bitte die richtige Zuordnung waehlen und pruefen."
+        )
+        for ed, ranking in unsicher:
+            col_datei, col_dropdown, col_pruef = st.columns([3, 2, 1])
+            with col_datei:
+                st.markdown(f"📄 **{ed.original_pfad}**")
+                score_str = ", ".join(
+                    f"{e.quelle} ({e.score:.0%})"
+                    for e in ranking.ergebnisse if e.moeglich
+                )
+                st.caption(score_str)
+                # Status-Anzeige
+                erg = st.session_state.zip_pruefungen.get(ed.original_pfad)
+                if erg is None:
+                    st.caption("⏳ noch nicht geprueft")
+                elif erg.bereit_zum_schreiben:
+                    txt = f"✅ bereit ({len(erg.mapping.saetze)} Zeilen)"
+                    if erg.zeilen_quarantaene:
+                        txt += f" · ⚠️ {erg.zeilen_quarantaene} in Quarantaene"
+                    st.caption(txt)
+                else:
+                    st.caption(f"❌ {erg.fehler_grund[:60]}")
+            with col_dropdown:
+                current = st.session_state.zip_wahl.get(
+                    ed.original_pfad, NICHT_IMPORTIEREN
+                )
+                idx = (
+                    dropdown_optionen.index(current)
+                    if current in dropdown_optionen else 0
+                )
+                st.session_state.zip_wahl[ed.original_pfad] = st.selectbox(
+                    f"Quelle fuer {ed.original_pfad}",
+                    options=dropdown_optionen,
+                    index=idx,
+                    key=f"quelle_{ed.original_pfad}",
+                    label_visibility="collapsed",
+                )
+            with col_pruef:
+                quelle_gewaehlt = st.session_state.zip_wahl.get(ed.original_pfad)
+                pruef_disabled = (quelle_gewaehlt == NICHT_IMPORTIEREN)
+                if st.button(
+                    "🔍 Pruefen", key=f"pruef_unsicher_{ed.original_pfad}",
+                    use_container_width=True, disabled=pruef_disabled,
+                ):
+                    _pruefe_datei(ed, quelle_gewaehlt)
+                    st.rerun()
+
+    # Kein Match -----------------------------------------------------------
+    if kein_match:
+        st.markdown("### ✗ Kein Match — werden abgelehnt")
+        st.caption(
+            "Diese Dateien passen zu keiner Config im Katalog und werden "
+            "beim Schreiben ins Reject-Verzeichnis verschoben."
+        )
+        for ed, _ in kein_match:
+            st.markdown(f"❌ `{ed.original_pfad}`")
 
     st.divider()
 
-    # Aktionen: Pruefen + Schreiben ---------------------------------------
-    col_pruef, col_reset = st.columns([1, 1])
-    with col_pruef:
-        pruefen_all = st.button(
-            "🔍 Ausgewaehlte pruefen (ohne Schreiben)",
-            type="primary", use_container_width=True,
+    # Aktions-Buttons ------------------------------------------------------
+    col_btn1, col_btn2, col_btn3 = st.columns([1, 1, 1])
+    with col_btn1:
+        pruef_all = st.button(
+            "🔍 Alle pruefen (Sammel-Aktion)",
+            type="secondary", use_container_width=True,
         )
-    with col_reset:
+    with col_btn2:
+        if st.button("➕ Neue Quelle anlegen", use_container_width=True):
+            st.session_state.neue_quelle_dialog = True
+            st.rerun()
+    with col_btn3:
         if st.button("🔄 Anderes ZIP hochladen", use_container_width=True):
             st.session_state.zip_wahl = None
+            st.session_state.zip_pruefungen = None
             _session_reset()
             st.rerun()
 
-    if pruefen_all:
+    # Alle einmal pruefen (fuer Vorschau + Fehlerdiagnose) -----------------
+    if pruef_all:
         pruef_ergebnisse = {}
         pbar = st.progress(0.0, text="Pruefe...")
-        eligible = [
-            ed for ed in zd
-            if st.session_state.zip_wahl.get(ed.original_pfad) != NICHT_IMPORTIEREN
+        to_check = [
+            (ed, cfg.name) for ed, cfg, _ in sicher
+        ] + [
+            (ed, st.session_state.zip_wahl[ed.original_pfad])
+            for ed, _ in unsicher
+            if st.session_state.zip_wahl[ed.original_pfad] != NICHT_IMPORTIEREN
         ]
-        for i, ed in enumerate(eligible, start=1):
-            pbar.progress(i / max(len(eligible), 1),
-                          text=f"[{i}/{len(eligible)}] {ed.original_pfad}")
-            quelle_gewahlt = st.session_state.zip_wahl[ed.original_pfad]
+        for i, (ed, quelle) in enumerate(to_check, start=1):
+            pbar.progress(i / max(len(to_check), 1),
+                          text=f"[{i}/{len(to_check)}] {ed.original_pfad}")
             pruef_ergebnisse[ed.original_pfad] = engine.verarbeite_mit_quelle(
-                ed.pfad, quelle_gewahlt
+                ed.pfad, quelle
             )
         pbar.empty()
         st.session_state.zip_pruefungen = pruef_ergebnisse
 
-    # Wenn schon geprueft: Ergebnisse anzeigen -----------------------------
+    # Pruefergebnisse: Detail-Anzeige pro Datei ----------------------------
     if st.session_state.get("zip_pruefungen"):
         st.subheader("Pruef-Ergebnisse")
-
         bereit_zum_schreiben = []
-        for ed in zd:
-            erg = st.session_state.zip_pruefungen.get(ed.original_pfad)
-            if erg is None:
-                continue  # nicht importieren gewaehlt
-
+        for ed, erg in st.session_state.zip_pruefungen.items():
             with st.container(border=True):
-                col_status, col_info = st.columns([1, 3])
-
+                col_s, col_i = st.columns([1, 3])
                 if erg.bereit_zum_schreiben:
-                    with col_status:
+                    with col_s:
                         st.success("✅ bereit")
-                    with col_info:
-                        st.markdown(f"**{ed.original_pfad}** → `{erg.cfg.zielsystem.tabelle}`")
+                    with col_i:
+                        st.markdown(f"**{ed}** → `{erg.cfg.zielsystem.tabelle}`")
                         st.caption(
                             f"{len(erg.mapping.saetze)} Datensaetze"
                             + (
-                                f" · {erg.zeilen_quarantaene} in Quarantaene (Fehler unten)"
+                                f" · {erg.zeilen_quarantaene} in Quarantaene"
                                 if erg.zeilen_quarantaene else ""
                             )
                         )
-                        bereit_zum_schreiben.append((ed, erg))
-
-                    # Vorschau optional aufklappen
-                    with st.expander("Vorschau"):
+                        bereit_zum_schreiben.append(
+                            (next(x for x in zd if x.original_pfad == ed), erg)
+                        )
+                    with st.expander("Vorschau (erste 20)"):
                         st.dataframe(
                             pd.DataFrame(
                                 erg.mapping.saetze[:20],
@@ -519,41 +605,45 @@ if st.session_state.zip_dateien is not None:
                             ),
                             hide_index=True, use_container_width=True,
                         )
-                        if len(erg.mapping.saetze) > 20:
-                            st.caption(f"... und {len(erg.mapping.saetze) - 20} weitere")
-
-                    # Quarantaene-Fehler nach Kategorie gruppiert
                     if erg.zeilen_quarantaene:
                         with st.expander(
-                            f"⚠️ Fehlerhafte Zeilen "
-                            f"({erg.zeilen_quarantaene} Zeilen, gruppiert)"
+                            f"⚠️ {erg.zeilen_quarantaene} Zeile(n) in Quarantaene"
                         ):
                             _zeige_fehler_gruppiert(erg.fehler_details)
                 else:
-                    with col_status:
+                    with col_s:
                         st.error("❌ abgelehnt")
-                    with col_info:
-                        st.markdown(f"**{ed.original_pfad}**")
+                    with col_i:
+                        st.markdown(f"**{ed}**")
                         st.caption(erg.fehler_grund)
-
                     with st.expander(
-                        f"Fehlerdetails ({len(erg.fehler_details)} Eintraege, gruppiert)"
+                        f"Fehlerdetails ({len(erg.fehler_details)}, gruppiert)"
                     ):
                         _zeige_fehler_gruppiert(erg.fehler_details)
 
-        # Schreiben-Button nur wenn ueberhaupt was bereit ist -----------
+        # Schreiben ----------------------------------------------------
         if bereit_zum_schreiben:
             st.divider()
             st.warning(
-                f"⚠️ Beim Schreiben werden **{len(bereit_zum_schreiben)}** Datei(en) "
-                "in die Zieltabellen eingefuegt und ins Archiv verschoben. "
-                "Quarantaene-Zeilen kommen zusaetzlich in den Reject-Ordner."
+                f"⚠️ Beim Schreiben werden **{len(bereit_zum_schreiben)}** "
+                "Datei(en) in ihre Zieltabellen eingefuegt und ins Archiv "
+                "verschoben."
             )
             if st.button(
                 "✅ Alle bereiten Dateien schreiben",
                 type="primary", use_container_width=True,
             ):
                 _schreibe_batch(bereit_zum_schreiben, engine)
+                # Kein-Match-Dateien noch rejecten
+                for ed, ranking in kein_match:
+                    details = [
+                        f"{e.quelle}: {e.ko_grund or 'Score '+format(e.score, '.0%')}"
+                        for e in ranking.ergebnisse
+                    ]
+                    verschiebe_ins_reject(
+                        ed.pfad, DEFAULT_REJECT,
+                        "Keine Config passt zu dieser Datei", details,
+                    )
 
     st.stop()
 
@@ -629,10 +719,25 @@ with col_plus:
 
 st.header("3. Pruefen")
 
+schnellimport = st.checkbox(
+    "🚀 Schnellimport (ohne Pruefvorschau direkt schreiben)",
+    value=False,
+    help=(
+        "Fuer Routine-Importe: die Datei wird gepruefft und bei Erfolg "
+        "sofort geschrieben — ohne Vorschau. Bei Fehlern wird trotzdem "
+        "abgebrochen und angezeigt. Verwendbar, wenn Sie den Datentyp "
+        "gut kennen."
+    ),
+)
+
 col_pruefen, col_neu = st.columns([1, 1])
 with col_pruefen:
+    pruefen_label = (
+        "🚀 Schnellimport: pruefen + schreiben" if schnellimport
+        else "🔍 Pruefen (ohne Speichern)"
+    )
     pruefen = st.button(
-        "🔍 Pruefen (ohne Speichern)", type="primary", use_container_width=True
+        pruefen_label, type="primary", use_container_width=True
     )
 with col_neu:
     if st.button("🔄 Andere Datei", use_container_width=True):
@@ -643,6 +748,9 @@ if pruefen:
     st.session_state.ergebnis = engine.verarbeite_mit_quelle(
         datei, st.session_state.gewaehlte_quelle
     )
+    # Schnellimport: Bei Erfolg direkt schreiben, Datei archivieren.
+    if schnellimport and st.session_state.ergebnis.bereit_zum_schreiben:
+        st.session_state.schnellimport_schreiben = True
 
 ergebnis = st.session_state.ergebnis
 if ergebnis is None:
@@ -715,6 +823,13 @@ st.warning(
 schreiben = st.button(
     "✅ In Zieltabelle schreiben", type="primary", use_container_width=True
 )
+
+# Schnellimport: Schreiben-Aktion wurde beim Pruefen bereits ausgeloest
+# und wird jetzt automatisch bearbeitet.
+if st.session_state.schnellimport_schreiben:
+    schreiben = True
+    st.session_state.schnellimport_schreiben = False
+    st.info("🚀 Schnellimport aktiv — schreibe direkt ...")
 
 if schreiben:
     logger.info(

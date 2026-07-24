@@ -39,7 +39,7 @@ from vierol_import.classification.classifier import (
     klassifiziere,
 )
 from vierol_import.encoding_erkennung import erkenne_encoding
-from vierol_import.loading.loader import PKKonfliktFehler, lade_sqlite
+from vierol_import.loading.loader import PKKonfliktFehler, lade
 from vierol_import.mapping.mapper import MappingErgebnis, mappe
 from vierol_import.monitoring.audit_log import logge_lauf
 from vierol_import.validation.validator import ValidierungsFehler, validiere
@@ -287,7 +287,7 @@ class ImportEngine:
         assert ergebnis.mapping is not None and ergebnis.cfg is not None
 
         try:
-            l = lade_sqlite(ergebnis.mapping, ergebnis.cfg, self.db_pfad)
+            l = lade(ergebnis.mapping, ergebnis.cfg, self.db_pfad)
             ergebnis.zeilen_geladen = l.zeilen_geladen
             ergebnis.zeilen_uebersprungen = l.zeilen_uebersprungen
         except PKKonfliktFehler as ex:

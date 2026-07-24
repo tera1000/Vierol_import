@@ -238,3 +238,34 @@ def _zu_sqlite_wert(v: Any) -> Any:
     if isinstance(v, (date, datetime)):
         return v.isoformat()
     return v
+
+
+# --- Dispatcher: Lader nach Zielsystem-Typ auswaehlen -----------------------
+
+
+def lade(
+    ergebnis: MappingErgebnis, cfg: QuellenConfig, db_pfad: Path
+) -> LadeErgebnis:
+    """Zentraler Einstiegspunkt: waehlt anhand `cfg.zielsystem.typ`
+    den passenden Lader.
+
+    Aktuell unterstuetzte Typen:
+      - sqlite (implementiert)
+      - oracle (Stub — im Buero zu vervollstaendigen)
+
+    Neue Zielsysteme (z. B. Postgres) sind hier durch einfaches
+    Ergaenzen einer Zeile plus eigenem Loader-Modul einbindbar.
+    """
+    typ = cfg.zielsystem.typ
+    if typ == "sqlite":
+        return lade_sqlite(ergebnis, cfg, db_pfad)
+    if typ == "oracle":
+        # Import verzoegert, damit oracledb nur bei Bedarf importiert
+        # wird (verhindert Warnungen, wenn das Package nicht installiert
+        # ist und man nur SQLite nutzt).
+        from vierol_import.loading.oracle_loader import lade_oracle
+        return lade_oracle(ergebnis, cfg, db_pfad)
+    raise ValueError(
+        f"Unbekanntes Zielsystem '{typ}' in Config '{cfg.name}'. "
+        f"Unterstuetzt: sqlite, oracle."
+    )
