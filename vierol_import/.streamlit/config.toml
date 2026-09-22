@@ -1,0 +1,7 @@
+[server]
+# Standard-Streamlit ist bei 200 MB. Fuer Lieferdateien vom Dienstleister
+# ist das oft zu wenig, insbesondere bei ZIPs mit mehreren CSVs drin.
+# 2048 MB = 2 GB Obergrenze. Faustregel im echten Betrieb: alles darueber
+# lieber ueber den Batch-Modus (`python -m vierol_import run`) laufen
+# lassen, weil Streamlit-Uploads komplett im RAM liegen.
+maxUploadSize = 2048

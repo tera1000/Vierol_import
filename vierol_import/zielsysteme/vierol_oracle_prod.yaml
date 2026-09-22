@@ -1,0 +1,9 @@
+# Produktiv-Verbindung zur Vierol-Oracle-DB.
+# Passwort wird zur Laufzeit erfragt (CLI-Prompt) und
+# nicht auf die Platte geschrieben.
+name: vierol_oracle_prod
+beschreibung: "Vierol Oracle Produktiv (Dienstleister-Daten)"
+typ: oracle
+user: VBD             
+dsn: "db-vbigdata-oda:1521/VBIGDATA.VIEROL.DE"   
+# schema: DWHRR   # optional

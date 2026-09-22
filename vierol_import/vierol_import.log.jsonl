@@ -1,0 +1,3 @@
+{"asctime": "2026-07-17 08:28:54,839", "levelname": "INFO", "name": "vierol_import.catalog.reader", "message": "1 Konfigurationen im Katalog geladen."}
+{"asctime": "2026-07-17 08:28:54,841", "levelname": "INFO", "name": "vierol_import.engine", "message": "Verarbeitung startet: .gitkeep"}
+{"asctime": "2026-07-17 08:28:54,841", "levelname": "WARNING", "name": "vierol_import.engine", "message": "Pipeline-Schritte sind noch nicht implementiert (siehe TODOs in engine.py)."}

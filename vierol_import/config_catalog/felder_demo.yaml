@@ -1,0 +1,31 @@
+name: felder_demo
+beschreibung: "Test der vier Feldkategorien"
+
+datei:
+  trennzeichen: ";"
+  encoding: utf-8
+  hat_header: false
+
+klassifikation:
+  schwellenwert: 0.9
+  stichprobe_zeilen: 5
+
+spalten:
+  - {position: 0, name: artikelnr, typ: string}
+  - {position: 1, name: menge, typ: integer}
+  - {position: 2, name: preis, typ: decimal_de}
+
+mapping:
+  felder:
+    - {ziel: artikelnr, kategorie: quelle, von: artikelnr}
+    - {ziel: menge, kategorie: quelle, von: menge}
+    - {ziel: preis_netto, kategorie: quelle, von: preis}
+    - {ziel: id, kategorie: auto}
+    - {ziel: geladen_am, kategorie: system, system_quelle: ladezeitpunkt_datum}
+    - {ziel: quelldatei, kategorie: system, system_quelle: dateiname}
+    - {ziel: gesamtwert, kategorie: berechnet, formel: "menge * preis_netto"}
+
+zielsystem:
+  ref: test_lokal
+  tabelle: felder_test_ziel
+  pk_konflikt: change

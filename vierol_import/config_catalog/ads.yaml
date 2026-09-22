@@ -1,0 +1,63 @@
+name: ads
+beschreibung: "DVSE ADS Export pro Quartal - Import nach Oracle DWHRR"
+
+datei:
+  trennzeichen: ";"        # Anpassen, falls Komma oder Tab (tsv) verwendet wird
+  encoding: utf-8
+  hat_header: true         # Da die erste Zeile Spaltenüberschriften enthält
+
+klassifikation:
+  schwellenwert: 0.9
+
+spalten:
+  - {position: 0,  name: ldate,      typ: string,     max_laenge: 10,  pflicht: false}
+  - {position: 1,  name: lkzgrp,     typ: string,     max_laenge: 100, pflicht: false}
+  - {position: 2,  name: normsearc,  typ: string,     max_laenge: 100, pflicht: false}
+  - {position: 3,  name: sumcnt,     typ: integer,                     pflicht: false}
+  - {position: 4,  name: genartnr,   typ: integer,                     pflicht: false}
+  - {position: 5,  name: genbez,     typ: string,     max_laenge: 255, pflicht: false}
+  - {position: 6,  name: dlnr,       typ: integer,                     pflicht: false}
+  - {position: 7,  name: dlnr_bez,   typ: string,     max_laenge: 100, pflicht: false}
+  - {position: 8,  name: eartnr,     typ: string,     max_laenge: 100, pflicht: false}
+  - {position: 9,  name: nartnr,     typ: string,     max_laenge: 100, pflicht: false}
+  - {position: 10, name: qty_pos,    typ: integer,                     pflicht: false}
+
+mapping:
+  felder:
+    # 1:1 Zuordnung aus der CSV-Datei in die Oracle-Zieltabelle
+    - {ziel: ldate,      kategorie: quelle, von: ldate}
+    - {ziel: lkzgrp,     kategorie: quelle, von: lkzgrp}
+    - {ziel: normsearc,  kategorie: quelle, von: normsearc}
+    - {ziel: sumcnt,     kategorie: quelle, von: sumcnt}
+    - {ziel: genartnr,   kategorie: quelle, von: genartnr}
+    - {ziel: genbez,     kategorie: quelle, von: genbez}
+    - {ziel: dlnr,       kategorie: quelle, von: dlnr}
+    - {ziel: dlnr_bez,   kategorie: quelle, von: dlnr_bez}
+    - {ziel: eartnr,     kategorie: quelle, von: eartnr}
+    - {ziel: nartnr,     kategorie: quelle, von: nartnr}
+    - {ziel: qty_pos,    kategorie: quelle, von: qty_pos}
+
+    # EXTRA FELDER: Aus dem Dateinamen extrahieren
+    # Dateiname-Beispiel: dvse_ADSMonthDS183Genart424_StandardADSExportproQuartal_01072025_31122025.csv
+
+    # Extrahieren des Startdatums "01072025" aus dem Dateinamen
+    - ziel: Quartal_von
+      kategorie: system
+      system_quelle: pfad_regex
+      regex: "_(\\d{8})_\\d{8}\\.csv$"
+      gruppen: [1]
+      typ: string
+
+    # Extrahieren des Enddatums "31122025" aus dem Dateinamen
+    - ziel: Quartal_bis
+      kategorie: system
+      system_quelle: pfad_regex
+      regex: "_\\d{8}_(\\d{8})\\.csv$"
+      gruppen: [1]
+      typ: string
+
+zielsystem:
+  ref: vierol_oracle_prod
+  tabelle: DWHRR.DVSE_ADS_EXPORT_TEST
+  pk_konflikt: insert
+  fehler_schwelle: 0.02

@@ -1,0 +1,44 @@
+name: us_oe_vierol
+beschreibung: "Vierol OE-Preisliste, geschachtelte ZIPs pro Stichtag"
+
+datei:
+  trennzeichen: "|"
+  encoding: utf-8
+  hat_header: false
+
+klassifikation:
+  schwellenwert: 0.9
+  stichprobe_zeilen: 5
+
+spalten:
+  - {position: 0, name: hersteller,   typ: string}
+  - {position: 1, name: oeno,         typ: string}
+  - {position: 2, name: bezeichnung,  typ: string}
+  - {position: 3, name: preis,        typ: decimal_en}
+  - {position: 4, name: datum_update, typ: date_iso}
+  - {position: 5, name: ersatzflag,   typ: string, pflicht: false}
+  - {position: 6, name: ersatznummer, typ: string, pflicht: false}
+  - {position: 7, name: laendercode,  typ: string, muster: "^[A-Z]$"}
+
+mapping:
+  felder:
+    - {ziel: hersteller,   kategorie: quelle, von: hersteller}
+    - {ziel: oeno,         kategorie: quelle, von: oeno}
+    - {ziel: bezeichnung,  kategorie: quelle, von: bezeichnung}
+    - {ziel: preis,        kategorie: quelle, von: preis}
+    - {ziel: datum_update, kategorie: quelle, von: datum_update}
+    - {ziel: ersatzflag,   kategorie: quelle, von: ersatzflag}
+    - {ziel: ersatznummer, kategorie: quelle, von: ersatznummer}
+    - {ziel: laendercode,  kategorie: quelle, von: laendercode}
+    # Stichtag aus dem AEUSSEREN ZIP-Namen extrahieren
+    - ziel: stichtag
+      kategorie: system
+      system_quelle: pfad_regex
+      regex: "/(\\d{4}-\\d{2}-\\d{2})"
+    - {ziel: geladen_am, kategorie: system, system_quelle: ladezeitpunkt_datum}
+
+zielsystem:
+  ref: test_lokal
+  tabelle: us_oe_vierol
+  upsert_key: [hersteller, oeno, stichtag]
+  pk_konflikt: update

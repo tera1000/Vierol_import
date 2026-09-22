@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# VS Code
+.vscode/
+
+# Laufzeitdaten (nicht ins Git — nur Struktur mit .gitkeep)
+data/ingest/*
+data/archive/*
+data/reject/*
+!data/ingest/.gitkeep
+!data/archive/.gitkeep
+!data/reject/.gitkeep
+
+# Lokale Datenbank
+*.db
+*.sqlite
+*.sqlite3
+
+# Umgebungsvariablen (nie ins Git!)
+.env
+
+# OS
+.DS_Store
+Thumbs.db

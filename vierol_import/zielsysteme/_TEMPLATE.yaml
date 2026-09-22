@@ -1,0 +1,22 @@
+# ============================================================================
+# VORLAGE fuer eine neue Zielsystem-Verbindung.
+# Kopiere diese Datei nach z.B. `mein_system.yaml`, benenne `name` gleich.
+# ============================================================================
+
+name: template
+beschreibung: "Kurze Beschreibung des Zielsystems"
+
+# Art des Zielsystems: sqlite | oracle
+typ: sqlite
+
+# --- Nur bei typ=sqlite ---
+# Pfad zur .sqlite-Datei relativ zum Projekt-Root
+pfad: data/vierol_import.sqlite
+
+# --- Nur bei typ=oracle ---
+# user: wilson.tematio
+# dsn: dbserver.vierol.local:1521/PROD
+# schema: DWHRR   # optional
+#
+# HINWEIS: Kein Passwort in der YAML — es wird beim ersten Verbinden
+# zur Laufzeit erfragt und nur im RAM gehalten.

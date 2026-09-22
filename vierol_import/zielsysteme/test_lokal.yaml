@@ -1,0 +1,5 @@
+# Lokale SQLite-Datenbank fuer Tests und Entwicklung.
+name: test_lokal
+beschreibung: "Lokale SQLite-DB fuer Tests"
+typ: sqlite
+pfad: data/vierol_import.sqlite

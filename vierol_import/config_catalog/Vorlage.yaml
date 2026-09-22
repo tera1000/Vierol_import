@@ -1,0 +1,282 @@
+# =============================================================================
+# VORLAGE: Quellen-Konfiguration fuer den Vierol-Import-Prototyp
+# =============================================================================
+# Diese Datei zeigt ALLE moeglichen Felder und Werte des Meta-Schemas mit
+# Erklaerung. Sie ist KEINE lauffaehige Config, sondern eine Referenz zum
+# Kopieren einzelner Abschnitte in eine echte config_catalog/<name>.yaml.
+#
+# Regel: der Dateiname (ohne .yaml) MUSS exakt dem 'name'-Feld entsprechen.
+# Beispiel: diese Datei wuerde als 'vorlage.yaml' gespeichert werden muessen.
+# =============================================================================
+
+name: Vorlage   # Muss == Dateiname ohne Endung sein
+
+
+# -----------------------------------------------------------------------------
+# 1) DATEI — wie wird die Rohdatei gelesen?
+# -----------------------------------------------------------------------------
+datei:
+
+  # Format-Erkennung. 'auto' erkennt anhand der Dateiendung:
+  #   .xlsx/.xlsm/.xls -> excel | .xml -> xml | .json/.jsonl -> json
+  #   alles andere (.csv/.txt/.dat/ohne Endung) -> csv
+  # Explizit setzen, wenn die Endung nicht zum tatsaechlichen Format passt.
+  format: auto              # auto | csv | excel | xml | json
+
+  # --- Nur relevant fuer format=csv (bzw. auto -> csv) ---
+  trennzeichen: "|"         # z.B. "|", ";", ",", "\t"
+  encoding: cp1252          # z.B. cp1252, utf-8, latin-1 — wird zusaetzlich
+                             # automatisch erkannt/validiert (encoding_erkennung.py)
+  hat_header: false         # true: erste Zeile wird als Kopfzeile uebersprungen
+
+  # Anfuehrungszeichen-Verhalten des CSV-Parsers:
+  #   minimal (Standard) — '"' umschliesst Felder als String-Delimiter
+  #                          (klassisches CSV, z.B. TecDoc-Format)
+  #   none               — '"' wird als GEWOEHNLICHES Zeichen behandelt
+  #                          (fuer Quellen, die '"' als Freitext-Zeichen
+  #                          nutzen, z.B. Vierol-Pipe-Dateien: NLA"GOLF TEES)
+  # WICHTIG: falscher Wert fuehrt zu verketteten Zeilen (minimal + '"' im
+  # Freitext) oder zu falsch belassenen Anfuehrungszeichen (none + echtes
+  # CSV-Quoting). Siehe Kapitel 5.3.5 / 6.2.2 der BA.
+  quoting: minimal           # minimal | none
+
+  # --- Nur relevant fuer format=excel ---
+  sheet: null                # Name der Registerkarte, z.B. "Preise".
+                              # null = erste Registerkarte wird genommen.
+
+  # --- Nur relevant fuer format=xml ---
+  xpath: null                 # XPath-Ausdruck fuer die Elemente, die als
+                               # Zeilen behandelt werden. null = './*'
+                               # (direkte Kinder der Wurzel).
+
+  # --- Nur relevant fuer format=json ---
+  json_orient: records        # pandas-Orientierung: records (Standard,
+                               # Array von Objekten) | columns | index |
+                               # split | table | values
+  json_lines: false           # true fuer JSONL (eine Zeile = ein JSON-Objekt).
+                               # Bei true wird json_orient ignoriert.
+
+
+# -----------------------------------------------------------------------------
+# 2) KLASSIFIKATION — wie wird die Datei automatisch erkannt?
+# -----------------------------------------------------------------------------
+klassifikation:
+
+  # Optionales Dateiname-Muster (fnmatch-Syntax). null wenn die Quelle
+  # keine verlaessliche Namenskonvention hat (haeufig bei Vierol-Quellen) —
+  # dann erfolgt Klassifikation rein strukturell ueber 'spalten' unten.
+
+  # Ab diesem Score (0.0 - 1.0) gilt die Quelle als sicherer Vorschlag.
+  # Score = (Anteil strukturell passender Zeilen) * (Anteil passender Zellen
+  # innerhalb dieser Zeilen). Hoeher = strenger.
+  schwellenwert: 0.6
+
+  # Wie viele Zeilen der Datei werden fuer die Klassifikations-Stichprobe
+  # gelesen und gegen 'spalten' geprueft.
+  stichprobe_zeilen: 20
+
+
+# -----------------------------------------------------------------------------
+# 3) SPALTEN — Schema der Quelldatei (fuer Klassifikation UND Validierung)
+# -----------------------------------------------------------------------------
+# WICHTIG: Positionen muessen luecken los 0..n-1 sein — jede Spalte der
+# Datei braucht eine Definition, sonst stimmt die Spaltenanzahl-Pruefung
+# nicht mehr (K.O.-Kriterium der Klassifikation, siehe Kapitel 4.4.1).
+spalten:
+
+  - position: 0
+    name: hersteller          # interner, logischer Spaltenname (wird im
+                               # mapping.felder als 'von' referenziert)
+    typ: string                # string | integer | decimal_de | decimal_en
+                                # | date_dmy | date_iso | boolean
+    pflicht: true               # false = leere Zelle ist erlaubt (Standard: true)
+    max_laenge: 200              # optionale maximale Zeichenlaenge. Wird
+                                  # sowohl bei der Validierung als auch als
+                                  # Bind-Groesse im Oracle-Adapter genutzt
+                                  # (verhindert den Batch-Bind-Width-Effekt,
+                                  # siehe Kapitel 5.3.4 / 6.2.3 der BA)
+    muster: null                  # optionales Regex-Muster fuer den Zellwert,
+                                   # z.B. "^[A-Z]{2}-\\d{5}$"
+    minimum: null                 # nur bei numerischen Typen: untere Schranke
+    maximum: null                 # nur bei numerischen Typen: obere Schranke
+
+  - position: 1
+    name: oeno
+    typ: string
+    pflicht: true
+    max_laenge: 200
+
+  - position: 2
+    name: bezeichnung
+    typ: string
+    pflicht: false
+    max_laenge: 350             # z.B. gespiegelt von Oracle VARCHAR2(350)
+
+  - position: 3
+    name: preis
+    typ: decimal_en              # decimal_en: "1234.56" | decimal_de: "1.234,56"
+    pflicht: false
+    minimum: 0.0                 # Beispiel: negative Preise ablehnen
+    maximum: null
+
+  - position: 4
+    name: datum_update
+    typ: date_iso                # date_iso: "2026-01-31" | date_dmy: "31.01.2026"
+    pflicht: false
+
+  - position: 5
+    name: ersatzflag
+    typ: string
+    pflicht: false
+    max_laenge: 1                # z.B. CHAR(1)-Zielspalte
+    muster: "^[A-Z]?$"           # ein Grossbuchstabe ODER leer
+
+  - position: 6
+    name: ist_aktiv
+    typ: boolean                 # akzeptiert z.B. 0/1, ja/nein, true/false
+    pflicht: false
+
+  - position: 7
+    name: laendercode
+    typ: string
+    pflicht: false
+    max_laenge: 1
+    muster: "^[A-Z]$"
+
+
+# -----------------------------------------------------------------------------
+# 4) MAPPING — Zuordnung Quelldaten -> kanonisches Datenmodell
+# -----------------------------------------------------------------------------
+# Vier Feldkategorien (siehe Kapitel 4.4.3 der BA). Jedes Zielfeld gehoert
+# zu genau einer Kategorie.
+mapping:
+  felder:
+
+    # --- Kategorie "quelle": Wert kommt direkt aus einer Quellspalte ---
+    - ziel: hersteller           # Feldname im kanonischen Modell / in der
+                                  # Zieltabelle
+      kategorie: quelle
+      von: hersteller            # muss ein 'name' aus dem spalten-Block sein
+
+    - ziel: oeno
+      kategorie: quelle
+      von: oeno
+
+    - ziel: bezeichnung
+      kategorie: quelle
+      von: bezeichnung
+
+    - ziel: preis
+      kategorie: quelle
+      von: preis
+
+    - ziel: datumletztesupdate
+      kategorie: quelle
+      von: datum_update
+
+    - ziel: ersatzflag
+      kategorie: quelle
+      von: ersatzflag
+
+    - ziel: laendercode
+      kategorie: quelle
+      von: laendercode
+
+    # --- Kategorie "auto": wird NICHT gemappt, Zieldatenbank erzeugt den
+    #     Wert selbst (z.B. Auto-Increment-Primaerschluessel). Muss NICHT
+    #     hier aufgefuehrt werden — Felder, die im Zielschema existieren
+    #     aber weder als quelle/system/berechnet gemappt sind, bleiben
+    #     automatisch aussen vor. Zur Dokumentation trotzdem oft sinnvoll: ---
+    # - ziel: id
+    #   kategorie: auto
+
+    # --- Kategorie "system": Wert kommt aus dem Verarbeitungskontext,
+    #     nicht aus der Quelldatei ---
+    - ziel: jahrmonat
+      kategorie: system
+      system_quelle: pfad_regex   # ladezeitpunkt | ladezeitpunkt_jahrmonat |
+                                    # ladezeitpunkt_datum | dateiname |
+                                    # elternordner | pfad_regex
+      regex: "/(\\d{4})-(\\d{2})-\\d{2}"   # nur bei system_quelle: pfad_regex
+      gruppen: [1, 2]                       # mehrere Regex-Gruppen zusammen-
+                                             # setzen (z.B. Jahr+Monat -> "202604")
+      # gruppe: 1                           # ALTERNATIVE zu 'gruppen': nur
+                                             # eine einzelne Gruppe verwenden
+
+    - ziel: verarbeitungszeitpunkt
+      kategorie: system
+      system_quelle: ladezeitpunkt          # vollstaendiger Zeitstempel des Laufs
+
+    - ziel: quelldateiname
+      kategorie: system
+      system_quelle: dateiname
+
+    - ziel: lieferordner
+      kategorie: system
+      system_quelle: elternordner            # Name des unmittelbaren Elternordners
+                                              # der Quelldatei
+
+    # --- Kategorie "berechnet": Wert wird aus bereits gemappten Feldern
+    #     per sicherer Formel abgeleitet (kein eval(), nur Grundrechenarten) ---
+    - ziel: gesamtpreis
+      kategorie: berechnet
+      formel: "preis * menge"                # darf nur +,-,*,/,() und bereits
+                                              # gemappte Feldnamen enthalten
+
+
+# -----------------------------------------------------------------------------
+# 5) ZIELSYSTEM — wohin und wie werden die Daten geladen?
+# -----------------------------------------------------------------------------
+zielsystem:
+
+  ref: vierol_oracle_prod       # Name einer Verbindung aus zielsysteme/*.yaml
+
+  tabelle: DWHRR.ZIELTABELLE     # "SCHEMA.TABELLE" oder nur "TABELLE"
+
+  # Ladestrategie bei bereits vorhandenem fachlichem Schluessel:
+  #   skip   — bestehender Datensatz bleibt unveraendert, neuer wird verworfen
+  #   update — bestehender Datensatz wird durch den neuen ersetzt
+  #   reject — die GESAMTE Datei wird abgelehnt, sobald ein Konflikt auftritt
+  pk_konflikt: skip
+
+  # Fachlicher Schluessel (Business Key), NICHT der technische DB-Primaer-
+  # schluessel. Erforderlich fuer pk_konflikt: update ODER reject.
+  upsert_key: [hersteller, oeno, jahrmonat]
+
+  # Ab welcher Fehlerquote (0.0 - 1.0) wird die GESAMTE Datei abgelehnt,
+  # statt nur die fehlerhaften Zeilen in die Quarantaene zu verschieben.
+  # 0.0 = keine Fehler toleriert (alles-oder-nichts-Modus).
+  # null = fehler_modus (unten) entscheidet stattdessen.
+  fehler_schwelle: 0.05
+
+  # Legacy-Alternative zu fehler_schwelle (wird nur genutzt, wenn
+  # fehler_schwelle NICHT gesetzt ist):
+  #   alles_oder_nichts -> entspricht fehler_schwelle: 0.0
+  #   partiell          -> entspricht fehler_schwelle: 1.0
+  # fehler_modus: alles_oder_nichts
+
+
+# =============================================================================
+# HINWEISE
+# =============================================================================
+# - Alle Felder mit Beispielwert oben sind so belegt, dass die Datei fuer
+#   sich genommen valide waere (bis auf den Platzhalter-Tabellennamen und
+#   die 'menge'-Spalte im berechneten Feld, die hier nicht in 'spalten'
+#   definiert ist). Vor dem echten Einsatz: unbenutzte Beispiel-Felder
+#   entfernen und mit 'validate-config' pruefen.
+#
+# - Minimal moegliche Config (nur Pflichtfelder):
+#
+#     name: minimal_beispiel
+#     datei:
+#       trennzeichen: ";"
+#     spalten:
+#       - {position: 0, name: feld1, typ: string}
+#     mapping:
+#       felder:
+#         - {ziel: feld1, kategorie: quelle, von: feld1}
+#     zielsystem:
+#       ref: lokal_test
+#       tabelle: ZIELTABELLE
+#       pk_konflikt: skip
+# =============================================================================
