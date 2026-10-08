@@ -404,7 +404,7 @@ class ZielsystemConfig(StrictModel):
         default="skip",
         description=(
             "Verhalten bei bereits existierendem Primaerschluessel:\n"
-            "  - skip   (Default): neuen Datensatz ueberspringen, alten behalten\n"
+            "  - skip   (Default): neuen Datensatz einspielen, alten behalten & ueberspringen\n"
             "  - update: neuen Datensatz einspielen, alten ueberschreiben\n"
             "  - insert: ganze Datei ablehnen, wenn auch nur ein Konflikt auftritt"
         ),

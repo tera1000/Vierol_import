@@ -1,0 +1,194 @@
+name: VIO
+beschreibung: "TecDoc VIO Import - VIO VIEROL AG 202609 nach Oracle VIO_TEST"
+
+datei:
+  trennzeichen: ";"
+  encoding: utf-8
+  hat_header: true
+  quoting: minimal
+
+klassifikation:
+  stichprobe_zeilen: 20
+  schwellenwert: 0.9
+
+spalten:
+  - {position: 0,  name: reg_type,                   typ: string,     pflicht: false}
+  - {position: 1,  name: tecdoc_reg_nr,              typ: string,     pflicht: false}
+  - {position: 2,  name: hmd_pm_no,                  typ: integer,    pflicht: false}
+  - {position: 3,  name: make,                       typ: string,     pflicht: false}
+  - {position: 4,  name: model,                      typ: string,     pflicht: false}
+  - {position: 5,  name: model_range,                typ: string,     pflicht: false}
+  - {position: 6,  name: segment,                    typ: string,     pflicht: false}
+  - {position: 7,  name: year_from,                  typ: string,     pflicht: false}
+  - {position: 8,  name: year_till,                  typ: string,     pflicht: false}
+  - {position: 9,  name: model_generation,           typ: string,     pflicht: false}
+  - {position: 10, name: tecdoc_number_d,            typ: string,     pflicht: false}
+  - {position: 11, name: horse_power_kw_ecc,         typ: integer,    pflicht: false}
+  - {position: 12, name: horse_power_pk_ps_cv,       typ: integer,    pflicht: false}
+  - {position: 13, name: fuel_type,                  typ: string,     pflicht: false}
+  - {position: 14, name: stroke_capacity_cc,         typ: integer,    pflicht: false}
+  - {position: 15, name: stroke_capacity_ltr,        typ: string, pflicht: false}
+  - {position: 16, name: cylinders_number,           typ: integer,    pflicht: false}
+  - {position: 17, name: valves_total_number,        typ: integer,    pflicht: false}
+  - {position: 18, name: bodystyle,                  typ: string,     pflicht: false}
+  - {position: 19, name: drive_instigation_axle_pos, typ: string,     pflicht: false}
+  - {position: 20, name: serie_description,          typ: string,     pflicht: false}
+  - {position: 21, name: brandmake_4wd,              typ: string,     pflicht: false}
+  - {position: 22, name: alias_alternative_name,     typ: string,     pflicht: false}
+  - {position: 23, name: aspiration,                 typ: string,     pflicht: false}
+  - {position: 24, name: body_information,           typ: string,     pflicht: false}
+  - {position: 25, name: bodystyle_description,      typ: string,     pflicht: false}
+  - {position: 26, name: bore_of_cylinder,           typ: string, pflicht: false}
+  - {position: 27, name: catalyst_code,              typ: string,     pflicht: false}
+  - {position: 28, name: co2_emissions_g_km,         typ: string,    pflicht: false}
+  - {position: 29, name: cooling_engine,             typ: string,     pflicht: false}
+  - {position: 30, name: country_of_origin,          typ: string,     pflicht: false}
+  - {position: 31, name: emission_standards,         typ: string,     pflicht: false}
+  - {position: 32, name: engine_code,                typ: string,     pflicht: false}
+  - {position: 33, name: engine_type,                typ: string,     pflicht: false}
+  - {position: 34, name: facelift_short,             typ: string,     pflicht: false}
+  - {position: 35, name: facelift_long,              typ: string,     pflicht: false}
+  - {position: 36, name: form_of_motorbody,          typ: string,     pflicht: false}
+  - {position: 37, name: fuel_system,                typ: string,     pflicht: false}
+  - {position: 38, name: geographical_zone,          typ: string,     pflicht: false}
+  - {position: 39, name: platform,                   typ: string,     pflicht: false}
+  - {position: 40, name: gross_vehicle_weight_kg,    typ: string,    pflicht: false}
+  - {position: 41, name: make_group,                 typ: string,     pflicht: false}
+  - {position: 42, name: market_segment,             typ: string,     pflicht: false}
+  - {position: 43, name: measurement_of_rim_rear,   typ: string,     pflicht: false}
+  - {position: 44, name: measurement_of_rim_front,  typ: string,     pflicht: false}
+  - {position: 45, name: model_code,                 typ: string,     pflicht: false}
+  - {position: 46, name: doors_number,               typ: string,     pflicht: false}
+  - {position: 47, name: options_car,                typ: string,     pflicht: false}
+  - {position: 48, name: output_rpm,                 typ: string,    pflicht: false}
+  - {position: 49, name: shape_of_engine,            typ: string,     pflicht: false}
+  - {position: 50, name: short_type_description,     typ: string,     pflicht: false}
+  - {position: 51, name: steering_box,               typ: string,     pflicht: false}
+  - {position: 52, name: steering_gear,              typ: string,     pflicht: false}
+  - {position: 53, name: stroke_of_crankshaft,       typ: string, pflicht: false}
+  - {position: 54, name: suspension_front,           typ: string,     pflicht: false}
+  - {position: 55, name: suspension_rear,            typ: string,     pflicht: false}
+  - {position: 56, name: torque_nm,                  typ: string,    pflicht: false}
+  - {position: 57, name: torque_rpm,                 typ: string,    pflicht: false}
+  - {position: 58, name: transmission_type,          typ: string,     pflicht: false}
+  - {position: 59, name: description_of_type_trim,   typ: string,     pflicht: false}
+  - {position: 60, name: wheelbase,                  typ: string,     pflicht: false}
+  - {position: 61, name: wheel_suspension_front,     typ: string,     pflicht: false}
+  - {position: 62, name: wheel_suspension_rear,      typ: string,     pflicht: false}
+  - {position: 63, name: country,                    typ: string,     pflicht: false}
+  - {position: 64, name: qty_2010,                   typ: integer,    pflicht: false}
+  - {position: 65, name: qty_2011,                   typ: integer,    pflicht: false}
+  - {position: 66, name: qty_2012,                   typ: integer,    pflicht: false}
+  - {position: 67, name: qty_2013,                   typ: integer,    pflicht: false}
+  - {position: 68, name: qty_2014,                   typ: integer,    pflicht: false}
+  - {position: 69, name: qty_2015,                   typ: integer,    pflicht: false}
+  - {position: 70, name: qty_2016,                   typ: integer,    pflicht: false}
+  - {position: 71, name: qty_2017,                   typ: integer,    pflicht: false}
+  - {position: 72, name: qty_2018,                   typ: integer,    pflicht: false}
+  - {position: 73, name: qty_2019,                   typ: integer,    pflicht: false}
+  - {position: 74, name: qty_2020,                   typ: integer,    pflicht: false}
+  - {position: 75, name: qty_2021,                   typ: integer,    pflicht: false}
+  - {position: 76, name: qty_2022,                   typ: integer,    pflicht: false}
+  - {position: 77, name: qty_2023,                   typ: integer,    pflicht: false}
+  - {position: 78, name: qty_2024,                   typ: integer,    pflicht: false}
+  - {position: 79, name: qty_2025,                   typ: integer,    pflicht: false}
+  - {position: 80, name: total_quantity_vehicles,    typ: integer,    pflicht: false}
+
+mapping:
+  felder:
+    - {ziel: reg_type,                   kategorie: quelle, von: reg_type}
+    - {ziel: tecdoc_reg_nr,              kategorie: quelle, von: tecdoc_reg_nr}
+    - {ziel: hmd_pm_no,                  kategorie: quelle, von: hmd_pm_no}
+    - {ziel: make,                       kategorie: quelle, von: make}
+    - {ziel: model,                      kategorie: quelle, von: model}
+    - {ziel: model_range,                kategorie: quelle, von: model_range}
+    - {ziel: segment,                    kategorie: quelle, von: segment}
+    - {ziel: year_from,                  kategorie: quelle, von: year_from}
+    - {ziel: year_till,                  kategorie: quelle, von: year_till}
+    - {ziel: model_generation,           kategorie: quelle, von: model_generation}
+    - {ziel: tecdoc_number_d,            kategorie: quelle, von: tecdoc_number_d}
+    - {ziel: horse_power_kw_ecc,         kategorie: quelle, von: horse_power_kw_ecc}
+    - {ziel: horse_power_pk_ps_cv,       kategorie: quelle, von: horse_power_pk_ps_cv}
+    - {ziel: fuel_type,                  kategorie: quelle, von: fuel_type}
+    - {ziel: stroke_capacity_cc,         kategorie: quelle, von: stroke_capacity_cc}
+    - {ziel: stroke_capacity_ltr,        kategorie: quelle, von: stroke_capacity_ltr}
+    - {ziel: cylinders_number,           kategorie: quelle, von: cylinders_number}
+    - {ziel: valves_total_number,        kategorie: quelle, von: valves_total_number}
+    - {ziel: bodystyle,                  kategorie: quelle, von: bodystyle}
+    - {ziel: drive_instigation_axle_pos, kategorie: quelle, von: drive_instigation_axle_pos}
+    - {ziel: serie_description,          kategorie: quelle, von: serie_description}
+    - {ziel: brandmake_4wd,              kategorie: quelle, von: brandmake_4wd}
+    - {ziel: alias_alternative_name,     kategorie: quelle, von: alias_alternative_name}
+    - {ziel: aspiration,                 kategorie: quelle, von: aspiration}
+    - {ziel: body_information,           kategorie: quelle, von: body_information}
+    - {ziel: bodystyle_description,      kategorie: quelle, von: bodystyle_description}
+    - {ziel: bore_of_cylinder,           kategorie: quelle, von: bore_of_cylinder}
+    - {ziel: catalyst_code,              kategorie: quelle, von: catalyst_code}
+    - {ziel: co2_emissions_g_km,         kategorie: quelle, von: co2_emissions_g_km}
+    - {ziel: cooling_engine,             kategorie: quelle, von: cooling_engine}
+    - {ziel: country_of_origin,          kategorie: quelle, von: country_of_origin}
+    - {ziel: emission_standards,         kategorie: quelle, von: emission_standards}
+    - {ziel: engine_code,                kategorie: quelle, von: engine_code}
+    - {ziel: engine_type,                kategorie: quelle, von: engine_type}
+    - {ziel: facelift_short,             kategorie: quelle, von: facelift_short}
+    - {ziel: facelift_long,              kategorie: quelle, von: facelift_long}
+    - {ziel: form_of_motorbody,          kategorie: quelle, von: form_of_motorbody}
+    - {ziel: fuel_system,                kategorie: quelle, von: fuel_system}
+    - {ziel: geographical_zone,          kategorie: quelle, von: geographical_zone}
+    - {ziel: platform,                   kategorie: quelle, von: platform}
+    - {ziel: gross_vehicle_weight_kg,    kategorie: quelle, von: gross_vehicle_weight_kg}
+    - {ziel: make_group,                 kategorie: quelle, von: make_group}
+    - {ziel: market_segment,             kategorie: quelle, von: market_segment}
+    - {ziel: measurement_of_rim_rear,   kategorie: quelle, von: measurement_of_rim_rear}
+    - {ziel: measurement_of_rim_front,  kategorie: quelle, von: measurement_of_rim_front}
+    - {ziel: model_code,                 kategorie: quelle, von: model_code}
+    - {ziel: doors_number,               kategorie: quelle, von: doors_number}
+    - {ziel: options_car,                kategorie: quelle, von: options_car}
+    - {ziel: output_rpm,                 kategorie: quelle, von: output_rpm}
+    - {ziel: shape_of_engine,            kategorie: quelle, von: shape_of_engine}
+    - {ziel: short_type_description,     kategorie: quelle, von: short_type_description}
+    - {ziel: steering_box,               kategorie: quelle, von: steering_box}
+    - {ziel: steering_gear,              kategorie: quelle, von: steering_gear}
+    - {ziel: stroke_of_crankshaft,       kategorie: quelle, von: stroke_of_crankshaft}
+    - {ziel: suspension_front,           kategorie: quelle, von: suspension_front}
+    - {ziel: suspension_rear,            kategorie: quelle, von: suspension_rear}
+    - {ziel: torque_nm,                  kategorie: quelle, von: torque_nm}
+    - {ziel: torque_rpm,                 kategorie: quelle, von: torque_rpm}
+    - {ziel: transmission_type,          kategorie: quelle, von: transmission_type}
+    - {ziel: description_of_type_trim,   kategorie: quelle, von: description_of_type_trim}
+    - {ziel: wheelbase,                  kategorie: quelle, von: wheelbase}
+    - {ziel: wheel_suspension_front,     kategorie: quelle, von: wheel_suspension_front}
+    - {ziel: wheel_suspension_rear,      kategorie: quelle, von: wheel_suspension_rear}
+    - {ziel: country,                    kategorie: quelle, von: country}
+    - {ziel: qty_2010,                   kategorie: quelle, von: qty_2010}
+    - {ziel: qty_2011,                   kategorie: quelle, von: qty_2011}
+    - {ziel: qty_2012,                   kategorie: quelle, von: qty_2012}
+    - {ziel: qty_2013,                   kategorie: quelle, von: qty_2013}
+    - {ziel: qty_2014,                   kategorie: quelle, von: qty_2014}
+    - {ziel: qty_2015,                   kategorie: quelle, von: qty_2015}
+    - {ziel: qty_2016,                   kategorie: quelle, von: qty_2016}
+    - {ziel: qty_2017,                   kategorie: quelle, von: qty_2017}
+    - {ziel: qty_2018,                   kategorie: quelle, von: qty_2018}
+    - {ziel: qty_2019,                   kategorie: quelle, von: qty_2019}
+    - {ziel: qty_2020,                   kategorie: quelle, von: qty_2020}
+    - {ziel: qty_2021,                   kategorie: quelle, von: qty_2021}
+    - {ziel: qty_2022,                   kategorie: quelle, von: qty_2022}
+    - {ziel: qty_2023,                   kategorie: quelle, von: qty_2023}
+    - {ziel: qty_2024,                   kategorie: quelle, von: qty_2024}
+    - {ziel: qty_2025,                   kategorie: quelle, von: qty_2025}
+    - {ziel: total_quantity_vehicles,    kategorie: quelle, von: total_quantity_vehicles}
+
+    # EXTRA FELD: Aus Dateinamen VIO VIEROL AG 202609 z.B. "202609" extrahieren
+    - ziel: delivery_date
+      kategorie: system
+      system_quelle: pfad_regex
+      regex: "(\\d{6})"
+      gruppen: [1]
+      typ: string
+
+zielsystem:
+  ref: vierol_oracle_prod
+  tabelle: VBD.VIO_TEST
+  upsert_key: [make, model, hmd_pm_no, country, total_quantity_vehicles]
+  pk_konflikt: insert
+  fehler_schwelle: 0.02

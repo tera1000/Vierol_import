@@ -6,11 +6,16 @@ im Log-File nach Textzeilen zu suchen, kann der Fachbereich mit einer
 SQL-Abfrage direkt Fragen beantworten wie:
   - "Wie viele Dateien wurden diesen Monat geladen?"
   - "Welche Quelle hat die meisten Rejects?"
-  - "Wurde die Datei X (per Hash) schon einmal geladen?"
+  - "In welche Zieltabelle / welches Schema ging ein bestimmter Lauf?"
 
 Die Tabelle heisst `import_lauf`. Fuer jeden Datei-Durchlauf wird
 GENAU EIN Eintrag geschrieben — egal ob Erfolg oder Ablehnung. So
 bleibt das Log vollstaendig auditierbar.
+
+Fuer die Historisierung protokolliert jeder Lauf zusaetzlich das
+Zielsystem, in das geschrieben wurde (ziel_schema + ziel_tabelle),
+damit spaeter nachvollziehbar ist, WOHIN eine Datenlieferung geflossen
+ist — auch wenn sich die Zielkonfiguration einer Quelle spaeter aendert.
 """
 
 from __future__ import annotations
@@ -27,10 +32,11 @@ CREATE TABLE IF NOT EXISTS import_lauf (
     id                   INTEGER PRIMARY KEY AUTOINCREMENT,
     zeitstempel          TEXT NOT NULL,
     dateiname            TEXT NOT NULL,
-    dateihash            TEXT,
     quelle               TEXT,
     score                REAL,
     status               TEXT NOT NULL,
+    ziel_schema          TEXT,
+    ziel_tabelle         TEXT,
     zeilen_gesamt        INTEGER,
     zeilen_geladen       INTEGER,
     zeilen_uebersprungen INTEGER,
@@ -63,9 +69,9 @@ CREATE TABLE IF NOT EXISTS import_fehler (
 
 _INDEX_DDLS = (
     "CREATE INDEX IF NOT EXISTS idx_lauf_zeit ON import_lauf(zeitstempel DESC)",
-    "CREATE INDEX IF NOT EXISTS idx_lauf_hash ON import_lauf(dateihash)",
     "CREATE INDEX IF NOT EXISTS idx_lauf_quelle ON import_lauf(quelle)",
     "CREATE INDEX IF NOT EXISTS idx_lauf_status ON import_lauf(status)",
+    "CREATE INDEX IF NOT EXISTS idx_lauf_zieltabelle ON import_lauf(ziel_tabelle)",
     "CREATE INDEX IF NOT EXISTS idx_fehler_lauf ON import_fehler(lauf_id)",
     "CREATE INDEX IF NOT EXISTS idx_fehler_grund ON import_fehler(grund)",
 )
@@ -78,14 +84,26 @@ def stelle_tabelle_sicher(db_pfad: Path) -> None:
     kann aber auch explizit beim Programmstart aufgerufen werden.
 
     Enthaelt eine kleine Schema-Migration fuer bestehende DBs:
-      - fehlende Spalten in import_fehler nachziehen (spalte, wert)
-      - alte 'roh_werte'-Spalte entfernen (SQLite >= 3.35;
-        sonst bleibt sie stehen und wird ignoriert)
+      - import_lauf: neue Spalten ziel_schema + ziel_tabelle nachziehen
+      - import_fehler: fehlende Spalten (spalte, wert, roh_zeile) nachziehen,
+        alte 'roh_werte'-Spalte entfernen (SQLite >= 3.35; sonst bleibt
+        sie stehen und wird ignoriert)
     """
     db_pfad.parent.mkdir(parents=True, exist_ok=True)
     with sqlite3.connect(db_pfad) as con:
         con.execute(_TABELLE_DDL)
         con.execute(_FEHLER_TABELLE_DDL)
+
+        # Migration import_lauf: ziel_schema + ziel_tabelle ergaenzen,
+        # falls die DB noch aus einer aelteren Version stammt.
+        lauf_vorhanden = {
+            row[1] for row in
+            con.execute("PRAGMA table_info(import_lauf)").fetchall()
+        }
+        if "ziel_schema" not in lauf_vorhanden:
+            con.execute("ALTER TABLE import_lauf ADD COLUMN ziel_schema TEXT")
+        if "ziel_tabelle" not in lauf_vorhanden:
+            con.execute("ALTER TABLE import_lauf ADD COLUMN ziel_tabelle TEXT")
 
         # Migration import_fehler: 'spalte' + 'wert' + 'roh_zeile' ergaenzen,
         # 'roh_werte' entfernen (falls aus aeltester Version noch da)
@@ -117,7 +135,8 @@ def logge_lauf(
     status: str,
     quelle: str | None = None,
     score: float | None = None,
-    dateihash: str | None = None,
+    ziel_schema: str | None = None,
+    ziel_tabelle: str | None = None,
     zeilen_gesamt: int = 0,
     zeilen_geladen: int = 0,
     zeilen_uebersprungen: int = 0,
@@ -131,9 +150,12 @@ def logge_lauf(
     """Einen Eintrag in `import_lauf` schreiben — plus die einzelnen
     Fehler-Details in `import_fehler` (wenn welche uebergeben werden).
 
+    ziel_schema + ziel_tabelle dokumentieren, wohin der Lauf geschrieben
+    hat (fuer die Historisierung). Beide sind optional — bei abgelehnten
+    Dateien, die gar nicht erst geladen werden, bleiben sie None.
+
     Rueckgabe: die frisch generierte lauf_id, oder None wenn das
     Schreiben fehlgeschlagen ist.
-
     Fehler beim Schreiben werden geloggt, aber NICHT weitergereicht —
     ein Audit-Fehler darf nie den fachlichen Import kaputt machen.
     """
@@ -145,16 +167,18 @@ def logge_lauf(
             cur.execute(
                 """
                 INSERT INTO import_lauf (
-                    zeitstempel, dateiname, dateihash, quelle, score,
-                    status, zeilen_gesamt, zeilen_geladen,
+                    zeitstempel, dateiname, quelle, score, status,
+                    ziel_schema, ziel_tabelle,
+                    zeilen_gesamt, zeilen_geladen,
                     zeilen_uebersprungen, zeilen_quarantaene,
                     fehler_grund, dauer_ms, benutzer_modus
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     datetime.now().isoformat(timespec="seconds"),
-                    dateiname, dateihash, quelle, score,
-                    status, zeilen_gesamt, zeilen_geladen,
+                    dateiname, quelle, score, status,
+                    ziel_schema, ziel_tabelle,
+                    zeilen_gesamt, zeilen_geladen,
                     zeilen_uebersprungen, zeilen_quarantaene,
                     fehler_grund, dauer_ms, benutzer_modus,
                 ),
@@ -263,6 +287,7 @@ def hole_letzte(db_pfad: Path, anzahl: int = 20) -> list[dict]:
         rows = con.execute(
             """
             SELECT id, zeitstempel, dateiname, quelle, status,
+                   ziel_schema, ziel_tabelle,
                    zeilen_geladen, zeilen_quarantaene, fehler_grund
               FROM import_lauf
              ORDER BY id DESC
@@ -271,17 +296,3 @@ def hole_letzte(db_pfad: Path, anzahl: int = 20) -> list[dict]:
             (anzahl,),
         ).fetchall()
     return [dict(r) for r in rows]
-
-
-def dateihash_wurde_geladen(db_pfad: Path, dateihash: str) -> bool:
-    """Wurde diese Datei (per Inhalts-Hash) schon einmal erfolgreich geladen?
-
-    Praktisch fuer die GUI/CLI, um vor doppeltem Import zu warnen.
-    """
-    stelle_tabelle_sicher(db_pfad)
-    with sqlite3.connect(db_pfad) as con:
-        row = con.execute(
-            "SELECT 1 FROM import_lauf WHERE dateihash = ? AND status = 'geladen' LIMIT 1",
-            (dateihash,),
-        ).fetchone()
-    return row is not None

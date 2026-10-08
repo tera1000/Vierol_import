@@ -8,7 +8,8 @@ Trennzeichen, Spaltenanzahl und die Struktur der Spalteninhalte.
 Ablauf pro (Datei, Config)-Paar:
 
   1. K.O.-Kriterien — wenn eines fehlschlaegt, ist der Score 0.0:
-     a) Datei laesst sich mit Encoding + Trennzeichen der Config parsen.
+     a) Datei laesst sich mit Format, Encoding + Trennzeichen der Config
+        parsen.
      b) Spaltenanzahl stimmt exakt mit der Config ueberein.
 
   2. Fein-Score (0.0 .. 1.0):
@@ -19,18 +20,26 @@ Ablauf pro (Datei, Config)-Paar:
 Das Ergebnis fuer eine Datei ist ein RANKING ueber alle Configs im
 Katalog — die Grundlage fuer den Quellen-Vorschlag im interaktiven
 CLI-Modus ("Diese Datei sieht zu 96% nach Topmotive aus").
+
+--- Format-Abstraktion ---
+Die Stichprobe wird ueber den zentralen Format-Reader
+(catalog.datei_reader.zeilen_iter) bezogen, NICHT ueber einen direkten
+csv.reader-Aufruf. Damit nutzt die Klassifikation dieselbe
+Format-Abstraktion wie Validierung und Mapping und funktioniert
+einheitlich fuer CSV/TXT sowie fuer Excel/XML/JSON. Der Reader
+kuemmert sich intern auch um die Header-Behandlung (bei hat_header
+startet die erste Datenzeile hinter der Kopfzeile), sodass hier keine
+manuelle Header-Sonderbehandlung mehr noetig ist.
 """
 
 from __future__ import annotations
 
-import csv
 import logging
-import re
 from dataclasses import dataclass
 from pathlib import Path
 
+from vierol_import.catalog.datei_reader import zeilen_iter
 from vierol_import.catalog.meta_schema import QuellenConfig
-from vierol_import.encoding_erkennung import erkenne_encoding
 from vierol_import.typen import passt_zelle
 
 logger = logging.getLogger(__name__)
@@ -93,68 +102,56 @@ class VorschlagsRanking:
         vorsprung = kandidaten[0].score - kandidaten[1].score
         return vorsprung >= mindest_vorsprung
 
-    def ist_eindeutig(self, schwellenwert_fuer_bester: float) -> bool:
-        """True wenn genau EINE Quelle ueber ihrer Schwelle liegt.
-
-        Sicherheits-Check fuer den Batch-Modus: Automatik nur wenn kein
-        anderer Kandidat auch nahe rankomat. Vermeidet, dass Dateien
-        automatisch in die falsche Zieltabelle geschrieben werden, wenn
-        zwei Configs strukturell gleich aussehen."""
-        kandidaten = [e for e in self.ergebnisse if e.moeglich]
-        if not kandidaten:
-            return False
-        if kandidaten[0].score < schwellenwert_fuer_bester:
-            return False
-        # Zweiter Kandidat auch ueber (irgend-)Schwellenwert? -> mehrdeutig
-        if len(kandidaten) >= 2 and kandidaten[1].score >= schwellenwert_fuer_bester:
-            return False
-        return True
-
 
 # --- Kern-Logik ---------------------------------------------------------------
 
 
 def _lese_stichprobe(
-    file_path: Path, trennzeichen: str, encoding: str, max_zeilen: int
+    file_path: Path, cfg: QuellenConfig, max_zeilen: int
 ) -> list[list[str]] | None:
-    """Erste N Zeilen als Spaltenlisten lesen. None bei Parse-Fehlern
-    (falsches Encoding, kaputte Datei) — das ist ein K.O., kein Absturz."""
+    """Erste N Datenzeilen als Spaltenlisten lesen, ueber den zentralen
+    Format-Reader.
+
+    Rueckgabe None bei Lese-/Parse-Fehlern (falsches Encoding, Format
+    passt nicht zur getesteten Config, kaputte Datei) — das ist ein
+    K.O.-Kriterium, kein Absturz. So faellt z.B. eine .xlsx-Datei, die
+    gegen eine CSV-Config getestet wird, kontrolliert heraus, statt die
+    Klassifikation abzubrechen.
+
+    Der Reader ueberspringt die Kopfzeile bereits selbst (bei
+    cfg.datei.hat_header), daher enthaelt die zurueckgegebene Liste
+    ausschliesslich Datenzeilen — eine separate Header-Behandlung ist
+    hier nicht mehr noetig.
+    """
     try:
-        with open(file_path, newline="", encoding=encoding) as f:
-            reader = csv.reader(f, delimiter=trennzeichen)
-            zeilen = []
-            for i, zeile in enumerate(reader):
-                if i >= max_zeilen:
-                    break
-                if zeile:  # komplett leere Zeilen ueberspringen
-                    zeilen.append(zeile)
-            return zeilen
-    except (UnicodeDecodeError, csv.Error, OSError) as e:
+        zeilen: list[list[str]] = []
+        for i, (_nr, felder) in enumerate(zeilen_iter(file_path, cfg.datei)):
+            if i >= max_zeilen:
+                break
+            if felder:  # komplett leere Zeilen ueberspringen
+                zeilen.append(felder)
+        return zeilen
+    except Exception as e:
+        # Bewusst breit: der Reader kann je nach Format sehr
+        # unterschiedliche Fehler werfen (UnicodeDecodeError bei falschem
+        # Encoding, pandas-/lxml-Fehler bei formatfremden Dateien etc.).
+        # Fuer die Klassifikation ist jeder davon gleichbedeutend mit
+        # "diese Config passt nicht" — also ein K.O., kein Absturz.
         logger.debug("Stichprobe aus %s nicht lesbar: %s", file_path.name, e)
         return None
 
 
 def bewerte_datei(file_path: Path, cfg: QuellenConfig) -> KlassifikationsErgebnis:
     """Eine Datei gegen genau eine Quellen-Config bewerten."""
-    d = cfg.datei
-    encoding = erkenne_encoding(file_path, wunsch=d.encoding)
     zeilen = _lese_stichprobe(
-        file_path, d.trennzeichen, encoding, cfg.klassifikation.stichprobe_zeilen
+        file_path, cfg, cfg.klassifikation.stichprobe_zeilen
     )
 
-    # K.O. a): nicht parsebar
+    # K.O. a): nicht parsebar (Format/Encoding passt nicht, leer, kaputt)
     if zeilen is None or not zeilen:
         return KlassifikationsErgebnis(
             quelle=cfg.name, score=0.0, ko_grund="Datei nicht lesbar/leer"
         )
-
-    # Header-Zeile ueberspringen, falls die Quelle einen hat
-    if d.hat_header:
-        zeilen = zeilen[1:]
-        if not zeilen:
-            return KlassifikationsErgebnis(
-                quelle=cfg.name, score=0.0, ko_grund="Nur Header, keine Datenzeilen"
-            )
 
     # K.O. b): KEINE einzige Zeile hat die erwartete Spaltenanzahl.
     # (Das deutet auf falsches Trennzeichen oder eine andere Quelle hin.

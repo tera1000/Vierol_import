@@ -1,0 +1,521 @@
+{
+  "$defs": {
+    "AbgeleitetesFeld": {
+      "additionalProperties": false,
+      "description": "Zielfeld, das NICHT aus einer Dateispalte kommt, sondern beim\nImport berechnet wird. Beispiel: `jahrmonat` aus dem Ladezeitpunkt.\n\n`funktion` referenziert eine registrierte Funktion in der\nMapping-Engine — neue Ableitungen werden dort einmal implementiert\nund sind dann fuer alle Quellen per YAML nutzbar.",
+      "properties": {
+        "ziel": {
+          "minLength": 1,
+          "title": "Ziel",
+          "type": "string"
+        },
+        "funktion": {
+          "enum": [
+            "ladezeitpunkt_jahrmonat",
+            "ladezeitpunkt_datum",
+            "dateiname"
+          ],
+          "title": "Funktion",
+          "type": "string"
+        }
+      },
+      "required": [
+        "ziel",
+        "funktion"
+      ],
+      "title": "AbgeleitetesFeld",
+      "type": "object"
+    },
+    "DateiConfig": {
+      "additionalProperties": false,
+      "description": "Physikalische Eigenschaften der Datei. Trennzeichen und Encoding\nsind pro Quelle stabil und dienen als K.O.-Kriterium der Erkennung.\n\nFormat-Steuerung: mit 'auto' (Default) wird das Format anhand der\nDateiendung erkannt (.xlsx/.xlsm/.xls -> excel, .xml -> xml,\n.json/.jsonl -> json, sonst csv). Explizite Werte 'csv', 'excel',\n'xml' oder 'json' erzwingen das Format unabhaengig von der Endung.",
+      "properties": {
+        "format": {
+          "default": "auto",
+          "description": "Datei-Format. 'auto' (Default) erkennt anhand der Dateiendung. Explizit setzen wenn die Endung nicht zum tatsaechlichen Format passt.",
+          "enum": [
+            "auto",
+            "csv",
+            "excel",
+            "xml",
+            "json"
+          ],
+          "title": "Format",
+          "type": "string"
+        },
+        "trennzeichen": {
+          "default": ";",
+          "title": "Trennzeichen",
+          "type": "string"
+        },
+        "encoding": {
+          "default": "utf-8",
+          "title": "Encoding",
+          "type": "string"
+        },
+        "hat_header": {
+          "default": false,
+          "title": "Hat Header",
+          "type": "boolean"
+        },
+        "sheet": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Nur fuer format=excel: Name der Registerkarte (Tab). Wenn leer, wird die erste Registerkarte genommen.",
+          "title": "Sheet"
+        },
+        "xpath": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Nur fuer format=xml: XPath-Ausdruck der die Elemente adressiert, die als Zeilen behandelt werden. Wenn leer, nutzt pandas den Standard './*' (direkte Kinder der Wurzel).",
+          "title": "Xpath"
+        },
+        "json_orient": {
+          "default": "records",
+          "description": "Nur fuer format=json: pandas-Orientierung. 'records' erwartet ein Array von Objekten [{...}, {...}]. Andere Werte: 'columns', 'index', 'split', 'table', 'values' — siehe pandas.read_json-Dokumentation.",
+          "title": "Json Orient",
+          "type": "string"
+        },
+        "json_lines": {
+          "default": false,
+          "description": "Nur fuer format=json: True fuer JSONL (eine Zeile = ein JSON-Objekt). Bei json_lines=True wird json_orient ignoriert.",
+          "title": "Json Lines",
+          "type": "boolean"
+        },
+        "quoting": {
+          "default": "minimal",
+          "description": "Wie der CSV-Parser mit Anfuehrungszeichen ('\"') umgeht.\n\n  'minimal' (Default): klassisches CSV-Verhalten — '\"' umschliesst Felder als String-Delimiter. Passt fuer Formate wie TecDoc, die jedes Feld gequotet ausgeben:\n     \"OPEL\";\"Corsa\";\"Passenger cars\";...\n\n  'none': '\"' wird als GEWOEHNLICHES Zeichen behandelt, kein Feld-Verketten. Passt fuer Formate ohne CSV-Quoting, die '\"' als Bestandteil von Freitext enthalten koennen — z.B. die Vierol-Pipe-Dateien:\n     Isuzu|X132|NLA\"GOLF TEES/MARKER KIT-NLA|...\n\nFalscher Wert fuehrt zu subtilen Datenqualitaets-Problemen:   * minimal + '\"'-Zeichen im Freitext -> Zeilen werden     ueber Zeilenumbrueche hinweg verkettet, Werte werden     absurd lang (Symptome: ORA-12899, 'field larger than     field limit')\n  * none + echtes CSV-Quoting -> '\"' bleibt Teil des     Werts (z.B. Feld wird '\"OPEL' statt 'OPEL')",
+          "enum": [
+            "minimal",
+            "none"
+          ],
+          "title": "Quoting",
+          "type": "string"
+        }
+      },
+      "title": "DateiConfig",
+      "type": "object"
+    },
+    "KlassifikationConfig": {
+      "additionalProperties": false,
+      "description": "Parameter fuer die inhaltsbasierte Erkennung.\n\nK.O.-Kriterien (nicht konfigurierbar, ergeben sich aus `datei` und\n`spalten`): Datei laesst sich mit dem Trennzeichen parsen und hat\nexakt die erwartete Spaltenanzahl.\n\nFein-Score: Anteil der Zellen in der Stichprobe, die zu Typ und\nMuster ihrer Spaltendefinition passen.",
+      "properties": {
+        "stichprobe_zeilen": {
+          "default": 20,
+          "minimum": 1,
+          "title": "Stichprobe Zeilen",
+          "type": "integer"
+        },
+        "schwellenwert": {
+          "default": 0.9,
+          "description": "Ab diesem Score gilt eine Quelle als sicherer Vorschlag.",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Schwellenwert",
+          "type": "number"
+        }
+      },
+      "title": "KlassifikationConfig",
+      "type": "object"
+    },
+    "MappingConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "regeln": {
+          "items": {
+            "$ref": "#/$defs/MappingRegel"
+          },
+          "title": "Regeln",
+          "type": "array"
+        },
+        "abgeleitete_felder": {
+          "items": {
+            "$ref": "#/$defs/AbgeleitetesFeld"
+          },
+          "title": "Abgeleitete Felder",
+          "type": "array"
+        },
+        "felder": {
+          "items": {
+            "$ref": "#/$defs/MappingFeld"
+          },
+          "title": "Felder",
+          "type": "array"
+        }
+      },
+      "title": "MappingConfig",
+      "type": "object"
+    },
+    "MappingFeld": {
+      "additionalProperties": false,
+      "description": "Vereinheitlichte Zielfeld-Definition mit expliziter Kategorie.\n\nDie vier Kategorien aus dem Briefing:\n  - quelle: Wert kommt direkt aus einer Quellspalte (via `von`)\n  - auto: Wert wird von der Ziel-DB gesetzt (z.B. Auto-Increment).\n          Beim Load nicht mitgeschrieben.\n  - system: Wert kommt aus dem Verarbeitungskontext\n            (Ladezeitpunkt, Dateiname etc. — siehe `system_quelle`)\n  - berechnet: Wert wird aus anderen bereits gemappten Feldern\n               ausgewertet (siehe `formel`)",
+      "properties": {
+        "ziel": {
+          "description": "Zielspaltenname in der DB",
+          "minLength": 1,
+          "title": "Ziel",
+          "type": "string"
+        },
+        "kategorie": {
+          "enum": [
+            "quelle",
+            "auto",
+            "system",
+            "berechnet"
+          ],
+          "title": "Kategorie",
+          "type": "string"
+        },
+        "von": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Nur bei kategorie=quelle: Name der Quellspalte (aus dem `spalten`-Block).",
+          "title": "Von"
+        },
+        "typ": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Nur bei kategorie=quelle: optionaler Konvertierungs-Hinweis. Ueblicherweise ist der Typ schon aus der Spaltendefinition bekannt.",
+          "title": "Typ"
+        },
+        "system_quelle": {
+          "anyOf": [
+            {
+              "enum": [
+                "ladezeitpunkt",
+                "ladezeitpunkt_jahrmonat",
+                "ladezeitpunkt_datum",
+                "dateiname",
+                "elternordner",
+                "pfad_regex"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Nur bei kategorie=system: aus welchem Kontext-Wert wird das Feld befuellt.\n  - ladezeitpunkt: voller Timestamp der Verarbeitung\n  - ladezeitpunkt_jahrmonat: z.B. '202608'\n  - ladezeitpunkt_datum: z.B. '2026-08-05'\n  - dateiname: Basename der Quelldatei\n  - elternordner: Name des unmittelbaren Elternordners (z.B. '2026-04-01' aus '.../2026-04-01/daten.csv')\n  - pfad_regex: Wert aus dem vollen Pfad per Regex extrahiert (braucht zusaetzlich 'regex' und optional 'gruppe')",
+          "title": "System Quelle"
+        },
+        "regex": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Nur bei system_quelle=pfad_regex: Python-Regex mit mindestens einer Gruppe. Der Match wird auf den vollen Pfad (als POSIX-String mit Forward-Slashes) angewendet.",
+          "title": "Regex"
+        },
+        "gruppe": {
+          "default": 1,
+          "description": "Nur bei system_quelle=pfad_regex: welche Regex-Gruppe verwendet wird (1-basiert). Default 1 = erste Gruppe.",
+          "minimum": 1,
+          "title": "Gruppe",
+          "type": "integer"
+        },
+        "gruppen": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "integer"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Nur bei system_quelle=pfad_regex: Alternative zu 'gruppe' fuer zusammengesetzte Werte. Mehrere Regex-Gruppen werden ohne Trennzeichen aneinandergehaengt, z.B. gruppen: [1, 2] mit regex '(\\d{4})-(\\d{2})-(\\d{2})' ergibt aus '2026-04-01' den Wert '202604'. Wenn gesetzt, hat 'gruppen' Vorrang vor 'gruppe'.",
+          "title": "Gruppen"
+        },
+        "formel": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Nur bei kategorie=berechnet: einfacher arithmetischer Ausdruck ueber bereits gemappte Felder, z.B. 'menge * preis_netto'. Nur numerische Operatoren + - * / und Klammern erlaubt.",
+          "title": "Formel"
+        }
+      },
+      "required": [
+        "ziel",
+        "kategorie"
+      ],
+      "title": "MappingFeld",
+      "type": "object"
+    },
+    "MappingRegel": {
+      "additionalProperties": false,
+      "properties": {
+        "quelle": {
+          "description": "Logischer Spaltenname aus dem `spalten`-Block.",
+          "title": "Quelle",
+          "type": "string"
+        },
+        "ziel": {
+          "description": "Feldname im kanonischen Datenmodell.",
+          "title": "Ziel",
+          "type": "string"
+        },
+        "konvertierung": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optionaler zusaetzlicher Konvertierungs-Key. Die Typ-Konvertierung (decimal_de -> float etc.) folgt bereits aus dem Spaltentyp.",
+          "title": "Konvertierung"
+        }
+      },
+      "required": [
+        "quelle",
+        "ziel"
+      ],
+      "title": "MappingRegel",
+      "type": "object"
+    },
+    "SpaltenDef": {
+      "additionalProperties": false,
+      "description": "Definition genau einer Spalte der Quelldatei.\n\n`position` ist der 0-basierte Spaltenindex (Dateien haben keinen\nHeader, also ist die Position die einzige verlaessliche Adresse).\n`name` ist ein logischer Name, den WIR vergeben — er existiert nur\nin der Config und macht Mapping-Regeln lesbar.",
+      "properties": {
+        "position": {
+          "minimum": 0,
+          "title": "Position",
+          "type": "integer"
+        },
+        "name": {
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "typ": {
+          "default": "string",
+          "enum": [
+            "string",
+            "integer",
+            "decimal_de",
+            "decimal_en",
+            "date_dmy",
+            "date_iso",
+            "boolean"
+          ],
+          "title": "Typ",
+          "type": "string"
+        },
+        "muster": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optionales Regex-Muster fuer den Zellinhalt, z. B. '^[A-Z]{2}-\\d{5}$'.",
+          "title": "Muster"
+        },
+        "pflicht": {
+          "default": true,
+          "title": "Pflicht",
+          "type": "boolean"
+        },
+        "minimum": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Minimum"
+        },
+        "maximum": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Maximum"
+        },
+        "max_laenge": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optionale maximale Zeichenlaenge des Zellwerts. Nuetzlich, um Ziel-DB-Spaltenlaengen zu spiegeln (z.B. Oracle VARCHAR2(350)) und zu lange Werte schon in der Validierung als Quarantaene-Zeile zu erkennen, statt sie erst beim DB-Schreibvorgang scheitern zu lassen (z.B. ORA-12899: value too large for column).",
+          "title": "Max Laenge"
+        }
+      },
+      "required": [
+        "position",
+        "name"
+      ],
+      "title": "SpaltenDef",
+      "type": "object"
+    },
+    "ZielsystemConfig": {
+      "additionalProperties": false,
+      "description": "Referenz auf eine Verbindung + Ziel-Tabelle.\n\nVor der Umstrukturierung stand hier direkt `typ: sqlite` bzw. `oracle`.\nAb jetzt zeigt `ref` auf eine Verbindung in `zielsysteme/*.yaml` — der\nTyp, die Credentials und alle Verbindungsdetails leben dort. Dadurch:\n  * Passwoerter niemals in der Quellen-YAML,\n  * einfacher Wechsel Test / Produktiv (nur `ref` austauschen),\n  * mehrere Verbindungen desselben Typs moeglich.",
+      "properties": {
+        "ref": {
+          "description": "Name der Zielsystem-Verbindung (Datei zielsysteme/<name>.yaml).",
+          "title": "Ref",
+          "type": "string"
+        },
+        "tabelle": {
+          "description": "Zieltabelle in dem referenzierten System.",
+          "title": "Tabelle",
+          "type": "string"
+        },
+        "upsert_key": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Upsert Key",
+          "type": "array"
+        },
+        "pk_konflikt": {
+          "default": "skip",
+          "description": "Verhalten bei bereits existierendem Primaerschluessel:\n  - skip   (Default): neuen Datensatz einspielen, alten behalten & ueberspringen\n  - update: neuen Datensatz einspielen, alten ueberschreiben\n  - insert: ganze Datei ablehnen, wenn auch nur ein Konflikt auftritt",
+          "enum": [
+            "skip",
+            "update",
+            "insert"
+          ],
+          "title": "Pk Konflikt",
+          "type": "string"
+        },
+        "fehler_modus": {
+          "default": "alles_oder_nichts",
+          "description": "Verhalten bei fehlerhaften Zeilen in der Datei:\n  - alles_oder_nichts (Default): eine kaputte Zeile -> Datei komplett\n    abgelehnt, keine Daten geladen. Sicher, aber im Alltag oft     unpraktisch bei grossen Dateien mit vereinzelten Fehlern.\n\nHINWEIS: Wenn fehler_schwelle gesetzt ist, wird sie bevorzugt und dieses Feld ignoriert.",
+          "enum": [
+            "alles_oder_nichts",
+            "partiell"
+          ],
+          "title": "Fehler Modus",
+          "type": "string"
+        },
+        "fehler_schwelle": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Feiner steuerbare Fehlerquote (0.0 - 1.0). Wenn gesetzt, wird sie an Stelle von fehler_modus verwendet:\n  - 0.0: keine Fehler tolerieren (= alles_oder_nichts)\n  - 0.05: bis 5% fehlerhafte Zeilen ok, dann Datei komplett ablehnen\n  - 1.0: alle Fehler tolerieren (= partiell)\n\nIst die Fehlerquote UEBER der Schwelle, wird die ganze Datei abgelehnt (Log-Status 'abgelehnt'); DARUNTER werden die guten Zeilen geladen und die kaputten in die Quarantaene verschoben.",
+          "title": "Fehler Schwelle"
+        }
+      },
+      "required": [
+        "ref",
+        "tabelle"
+      ],
+      "title": "ZielsystemConfig",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Eine vollstaendige, validierte Konfiguration fuer eine externe\nDatenquelle. Entspricht genau einer YAML-Datei in `config_catalog/`.",
+  "properties": {
+    "name": {
+      "minLength": 1,
+      "title": "Name",
+      "type": "string"
+    },
+    "beschreibung": {
+      "default": "",
+      "title": "Beschreibung",
+      "type": "string"
+    },
+    "datei": {
+      "$ref": "#/$defs/DateiConfig"
+    },
+    "spalten": {
+      "items": {
+        "$ref": "#/$defs/SpaltenDef"
+      },
+      "title": "Spalten",
+      "type": "array"
+    },
+    "klassifikation": {
+      "$ref": "#/$defs/KlassifikationConfig"
+    },
+    "mapping": {
+      "$ref": "#/$defs/MappingConfig"
+    },
+    "zielsystem": {
+      "$ref": "#/$defs/ZielsystemConfig"
+    }
+  },
+  "required": [
+    "name",
+    "spalten",
+    "mapping",
+    "zielsystem"
+  ],
+  "title": "Vierol Import — Quellen-Konfiguration",
+  "type": "object",
+  "$schema": "http://json-schema.org/draft-07/schema#"
+}

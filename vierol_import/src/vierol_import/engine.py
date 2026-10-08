@@ -66,7 +66,7 @@ class Status(str, Enum):
       - erfolgreich (=geladen)
       - klaerung (Klassifikation unklar oder unbekannt)
       - abgelehnt (Validierung/Ladefehler)
-      - konflikt (PK-Konflikt bei strategie=append/reject)
+      - konflikt (PK-Konflikt bei strategie=insert)
 
     Die detaillierten Werte unten sind Subtypen fuer bessere Diagnose,
     lassen sich aber ueber ihr Prefix in die vier Briefing-Kategorien
@@ -77,7 +77,7 @@ class Status(str, Enum):
     KLAERUNG_UNBEKANNT = "klaerung_unbekannt"      # keine Config passt
     KLAERUNG_UNSICHER = "klaerung_unsicher"        # bester Score < Schwelle
     ABGELEHNT_UNGUELTIG = "abgelehnt_ungueltig"    # Validierung fehlgeschlagen
-    KONFLIKT_PK = "konflikt_pk"                    # pk_konflikt=reject griff
+    KONFLIKT_PK = "konflikt_pk"                    # pk_konflikt=insert griff
     ABGELEHNT_LADEFEHLER = "abgelehnt_ladefehler"  # Exception beim Load
 
     # Rueckwaerts-kompatible Aliase (alte Werte, damit alte Log-Eintraege
@@ -210,7 +210,7 @@ class ImportEngine:
             self._loggen(e)
             return e
 
-        # NEU: Mehrdeutigkeit pruefen — wenn ein zweiter Kandidat ebenfalls
+        # Mehrdeutigkeit pruefen — wenn ein zweiter Kandidat ebenfalls
         # ueber (irgend-)einem Schwellenwert liegt, ist das keine sichere
         # Zuordnung. Wir raten dann NICHT, sondern lehnen ab (Batch-Modus)
         # bzw. lassen die interaktive Nachfrage in verarbeite_auto_und_schreibe
@@ -468,13 +468,22 @@ class ImportEngine:
         Detaillierte Fehler (z. B. die 18 kaputten Zeilen in einer
         ansonsten erfolgreichen 151k-Zeilen-Datei) werden in die
         Tabelle `import_fehler` geschrieben, verknuepft ueber lauf_id.
+
+        Fuer die Historisierung wird zusaetzlich das Zielsystem
+        (Schema + Tabelle) protokolliert, sofern eine Config vorliegt.
+        Bei fruehen Ablehnungen (z. B. keine Config passt) ist cfg None;
+        dann bleiben ziel_schema/ziel_tabelle leer.
         """
+        ziel_schema, ziel_tabelle = self._ziel_zerlegen(ergebnis)
+
         logge_lauf(
             self.db_pfad,
             dateiname=ergebnis.datei.name,
             status=ergebnis.status.value,
             quelle=ergebnis.quelle,
             score=ergebnis.score,
+            ziel_schema=ziel_schema,
+            ziel_tabelle=ziel_tabelle,
             zeilen_gesamt=ergebnis.zeilen_gesamt,
             zeilen_geladen=ergebnis.zeilen_geladen,
             zeilen_uebersprungen=ergebnis.zeilen_uebersprungen,
@@ -484,6 +493,30 @@ class ImportEngine:
             quarantaene_zeilen=ergebnis.quarantaene_zeilen,
             benutzer_modus=self.benutzer_modus,
         )
+
+    @staticmethod
+    def _ziel_zerlegen(
+        ergebnis: VerarbeitungsErgebnis,
+    ) -> tuple[str | None, str | None]:
+        """Zieltabellen-Referenz aus der Config in (schema, tabelle) zerlegen.
+
+        "DWHRR.US_OE_BRUTTOPREISE_TEST" -> ("DWHRR", "US_OE_BRUTTOPREISE_TEST")
+        "ZIELTABELLE"                   -> (None, "ZIELTABELLE")
+
+        Liegt keine Config vor (z. B. fruehe Ablehnung weil keine Quelle
+        passte), wird (None, None) zurueckgegeben — dann bleibt im Log
+        unvermerkt, wohin NICHT geschrieben wurde, was korrekt ist.
+        """
+        cfg = getattr(ergebnis, "cfg", None)
+        if cfg is None or not getattr(cfg, "zielsystem", None):
+            return None, None
+        ref = cfg.zielsystem.tabelle
+        if not ref:
+            return None, None
+        if "." in ref:
+            schema, tab = ref.rsplit(".", 1)
+            return schema, tab
+        return None, ref
 
     def verarbeite_auto_und_schreibe(self, datei: Path) -> VerarbeitungsErgebnis:
         """Batch-Convenience: `verarbeite_auto()` + direkt `schreibe()`.
